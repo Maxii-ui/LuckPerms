@@ -26,7 +26,6 @@
 package me.lucko.luckperms.common.verbose;
 
 import com.google.gson.JsonObject;
-
 import me.lucko.luckperms.common.cacheddata.result.TristateResult;
 import me.lucko.luckperms.common.http.AbstractHttpClient;
 import me.lucko.luckperms.common.http.BytebinClient;
@@ -42,9 +41,9 @@ import me.lucko.luckperms.common.verbose.event.CheckOrigin;
 import me.lucko.luckperms.common.verbose.event.MetaCheckEvent;
 import me.lucko.luckperms.common.verbose.event.PermissionCheckEvent;
 import me.lucko.luckperms.common.verbose.event.VerboseEvent;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.luckperms.api.cacheddata.Result;
 import net.luckperms.api.node.Node;
@@ -224,7 +223,7 @@ public class VerboseListener {
         }
 
         // send the message
-        HoverEvent<Component> hoverEvent = HoverEvent.showText(Component.join(Component.newline(), hover));
+        HoverEvent<Component> hoverEvent = HoverEvent.showText(Component.join(JoinConfiguration.newlines(), hover));
         this.notifiedSender.sendMessage(component.hoverEvent(hoverEvent));
     }
 

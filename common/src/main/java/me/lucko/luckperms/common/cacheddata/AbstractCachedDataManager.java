@@ -34,7 +34,6 @@ import me.lucko.luckperms.common.calculator.PermissionCalculator;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.common.util.CaffeineFactory;
 import me.lucko.luckperms.common.util.CompletableFutures;
-
 import net.luckperms.api.cacheddata.CachedData;
 import net.luckperms.api.cacheddata.CachedDataManager;
 import net.luckperms.api.cacheddata.CachedMetaData;
@@ -43,7 +42,6 @@ import net.luckperms.api.metastacking.MetaStackDefinition;
 import net.luckperms.api.node.ChatMetaType;
 import net.luckperms.api.node.Node;
 import net.luckperms.api.query.QueryOptions;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Map;
@@ -195,7 +193,7 @@ public abstract class AbstractCachedDataManager implements CachedDataManager {
         }
 
         public void cleanup() {
-            this.cache.values().removeIf(value -> ((UsageTracked) value).usedSince(TimeUnit.MINUTES.toMillis(2)));
+            this.cache.values().removeIf(value -> !((UsageTracked) value).usedInTheLast(2, TimeUnit.MINUTES));
         }
 
         @Override

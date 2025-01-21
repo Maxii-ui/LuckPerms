@@ -27,7 +27,6 @@ package me.lucko.luckperms.common.event;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-
 import me.lucko.luckperms.common.api.implementation.ApiPermissionHolder;
 import me.lucko.luckperms.common.cacheddata.GroupCachedDataManager;
 import me.lucko.luckperms.common.cacheddata.UserCachedDataManager;
@@ -42,7 +41,6 @@ import me.lucko.luckperms.common.model.Track;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.sender.Sender;
 import me.lucko.luckperms.common.util.Difference;
-
 import net.luckperms.api.actionlog.Action;
 import net.luckperms.api.event.LuckPermsEvent;
 import net.luckperms.api.event.cause.CreationCause;
@@ -60,6 +58,7 @@ import net.luckperms.api.event.log.LogNetworkPublishEvent;
 import net.luckperms.api.event.log.LogNotifyEvent;
 import net.luckperms.api.event.log.LogPublishEvent;
 import net.luckperms.api.event.log.LogReceiveEvent;
+import net.luckperms.api.event.messaging.CustomMessageReceiveEvent;
 import net.luckperms.api.event.node.NodeAddEvent;
 import net.luckperms.api.event.node.NodeClearEvent;
 import net.luckperms.api.event.node.NodeMutateEvent;
@@ -72,9 +71,11 @@ import net.luckperms.api.event.player.lookup.UsernameLookupEvent;
 import net.luckperms.api.event.player.lookup.UsernameValidityCheckEvent;
 import net.luckperms.api.event.source.Source;
 import net.luckperms.api.event.sync.ConfigReloadEvent;
+import net.luckperms.api.event.sync.PostNetworkSyncEvent;
 import net.luckperms.api.event.sync.PostSyncEvent;
 import net.luckperms.api.event.sync.PreNetworkSyncEvent;
 import net.luckperms.api.event.sync.PreSyncEvent;
+import net.luckperms.api.event.sync.SyncType;
 import net.luckperms.api.event.track.TrackCreateEvent;
 import net.luckperms.api.event.track.TrackDeleteEvent;
 import net.luckperms.api.event.track.TrackLoadAllEvent;
@@ -95,7 +96,6 @@ import net.luckperms.api.extension.Extension;
 import net.luckperms.api.model.PlayerSaveResult;
 import net.luckperms.api.model.data.DataType;
 import net.luckperms.api.node.Node;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.List;
@@ -226,6 +226,10 @@ public final class EventDispatcher {
         postAsync(LogReceiveEvent.class, id, entry);
     }
 
+    public void dispatchCustomMessageReceive(String channelId, String payload) {
+        postAsync(CustomMessageReceiveEvent.class, channelId, payload);
+    }
+
     public void dispatchNodeChanges(PermissionHolder target, DataType dataType, Difference<Node> changes) {
         if (!this.eventBus.shouldPost(NodeAddEvent.class) && !this.eventBus.shouldPost(NodeRemoveEvent.class)) {
             return;
@@ -273,12 +277,16 @@ public final class EventDispatcher {
         postAsync(ConfigReloadEvent.class);
     }
 
+    public void dispatchNetworkPostSync(UUID id, SyncType type, boolean didOccur, UUID specificUserUniqueId) {
+        postAsync(PostNetworkSyncEvent.class, id, type, didOccur, specificUserUniqueId);
+    }
+
     public void dispatchPostSync() {
         postAsync(PostSyncEvent.class);
     }
 
-    public boolean dispatchNetworkPreSync(boolean initialState, UUID id) {
-        return postCancellable(PreNetworkSyncEvent.class, initialState, id);
+    public boolean dispatchNetworkPreSync(boolean initialState, UUID id, SyncType type, UUID specificUserUniqueId) {
+        return postCancellable(PreNetworkSyncEvent.class, initialState, id, type, specificUserUniqueId);
     }
 
     public boolean dispatchPreSync(boolean initialState) {
@@ -407,6 +415,7 @@ public final class EventDispatcher {
                 LogNotifyEvent.class,
                 LogPublishEvent.class,
                 LogReceiveEvent.class,
+                CustomMessageReceiveEvent.class,
                 NodeAddEvent.class,
                 NodeClearEvent.class,
                 NodeRemoveEvent.class,
@@ -417,6 +426,7 @@ public final class EventDispatcher {
                 UsernameLookupEvent.class,
                 UsernameValidityCheckEvent.class,
                 ConfigReloadEvent.class,
+                PostNetworkSyncEvent.class,
                 PostSyncEvent.class,
                 PreNetworkSyncEvent.class,
                 PreSyncEvent.class,

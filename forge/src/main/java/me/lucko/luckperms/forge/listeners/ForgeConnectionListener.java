@@ -26,7 +26,6 @@
 package me.lucko.luckperms.forge.listeners;
 
 import com.mojang.authlib.GameProfile;
-
 import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.locale.Message;
 import me.lucko.luckperms.common.locale.TranslationManager;
@@ -35,24 +34,25 @@ import me.lucko.luckperms.common.plugin.util.AbstractConnectionListener;
 import me.lucko.luckperms.forge.ForgeSenderFactory;
 import me.lucko.luckperms.forge.LPForgePlugin;
 import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
-
+import me.lucko.luckperms.forge.util.AsyncConfigurationTask;
 import net.kyori.adventure.text.Component;
-import net.minecraft.Util;
 import net.minecraft.network.Connection;
-import net.minecraft.network.chat.ChatType;
-import net.minecraft.network.protocol.game.ClientboundChatPacket;
+import net.minecraft.network.PacketListener;
 import net.minecraft.network.protocol.login.ClientboundLoginDisconnectPacket;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.server.network.ConfigurationTask;
+import net.minecraft.server.network.ServerConfigurationPacketListenerImpl;
 import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.PlayerNegotiationEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.minecraftforge.event.network.GatherLoginConfigurationTasksEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 public class ForgeConnectionListener extends AbstractConnectionListener {
+    private static final ConfigurationTask.Type USER_LOGIN_TASK_TYPE = new ConfigurationTask.Type("luckperms:user_login");
+
     private final LPForgePlugin plugin;
 
     public ForgeConnectionListener(LPForgePlugin plugin) {
@@ -61,17 +61,30 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
     }
 
     @SubscribeEvent
-    public void onPlayerNegotiation(PlayerNegotiationEvent event) {
-        String username = event.getProfile().getName();
-        UUID uniqueId = event.getProfile().isComplete() ? event.getProfile().getId() : Player.createPlayerUUID(username);
+    public void onGatherLoginConfigurationTasks(GatherLoginConfigurationTasksEvent event) {
+        PacketListener packetListener = event.getConnection().getPacketListener();
+        if (!(packetListener instanceof ServerConfigurationPacketListenerImpl)) {
+            return;
+        }
+
+        GameProfile gameProfile = ((ServerConfigurationPacketListenerImpl) packetListener).getOwner();
+        if (gameProfile == null) {
+            return;
+        }
+
+        String username = gameProfile.getName();
+        UUID uniqueId = gameProfile.getId();
 
         if (this.plugin.getConfiguration().get(ConfigKeys.DEBUG_LOGINS)) {
             this.plugin.getLogger().info("Processing pre-login (sync phase) for " + uniqueId + " - " + username);
         }
 
-        event.enqueueWork(CompletableFuture.runAsync(() -> {
-            onPlayerNegotiationAsync(event.getConnection(), uniqueId, username);
-        }, this.plugin.getBootstrap().getScheduler().async()));
+        AsyncConfigurationTask task = new AsyncConfigurationTask(
+                this.plugin,
+                USER_LOGIN_TASK_TYPE,
+                () -> onPlayerNegotiationAsync(event.getConnection(), uniqueId, username)
+        );
+        event.addTask(task);
     }
 
     private void onPlayerNegotiationAsync(Connection connection, UUID uniqueId, String username) {
@@ -94,26 +107,19 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
             this.plugin.getEventDispatcher().dispatchPlayerLoginProcess(uniqueId, username, user);
         } catch (Exception ex) {
             this.plugin.getLogger().severe("Exception occurred whilst loading data for " + uniqueId + " - " + username, ex);
-            
+
             if (this.plugin.getConfiguration().get(ConfigKeys.CANCEL_FAILED_LOGINS)) {
                 Component component = TranslationManager.render(Message.LOADING_DATABASE_ERROR.build());
                 connection.send(new ClientboundLoginDisconnectPacket(ForgeSenderFactory.toNativeText(component)));
                 connection.disconnect(ForgeSenderFactory.toNativeText(component));
-            } else {
-                // Schedule the message to be sent on the next tick.
-                this.plugin.getBootstrap().getServer().orElseThrow(IllegalStateException::new).execute(() -> {
-                    Component component = TranslationManager.render(Message.LOADING_STATE_ERROR.build());
-                    connection.send(new ClientboundChatPacket(ForgeSenderFactory.toNativeText(component), ChatType.SYSTEM, Util.NIL_UUID));
-                });
+                this.plugin.getEventDispatcher().dispatchPlayerLoginProcess(uniqueId, username, null);
             }
-
-            this.plugin.getEventDispatcher().dispatchPlayerLoginProcess(uniqueId, username, null);
         }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public void onPlayerLoadFromFile(PlayerEvent.LoadFromFile event) {
-        ServerPlayer player = (ServerPlayer) event.getPlayer();
+    public void onPlayerLoggedIn(PlayerLoggedInEvent event) {
+        ServerPlayer player = (ServerPlayer) event.getEntity();
         GameProfile profile = player.getGameProfile();
 
         if (this.plugin.getConfiguration().get(ConfigKeys.DEBUG_LOGINS)) {
@@ -134,8 +140,9 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
             Component component = TranslationManager.render(Message.LOADING_STATE_ERROR.build(), player.getLanguage());
             if (this.plugin.getConfiguration().get(ConfigKeys.CANCEL_FAILED_LOGINS)) {
                 player.connection.disconnect(ForgeSenderFactory.toNativeText(component));
+                return;
             } else {
-                player.sendMessage(ForgeSenderFactory.toNativeText(component), Util.NIL_UUID);
+                player.sendSystemMessage(ForgeSenderFactory.toNativeText(component));
             }
         }
 
@@ -147,7 +154,7 @@ public class ForgeConnectionListener extends AbstractConnectionListener {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
-        ServerPlayer player = (ServerPlayer) event.getPlayer();
+        ServerPlayer player = (ServerPlayer) event.getEntity();
         handleDisconnect(player.getGameProfile().getId());
     }
 

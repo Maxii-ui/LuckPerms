@@ -28,21 +28,16 @@ package me.lucko.luckperms.common.storage.implementation.sql.connection.hikari;
 import com.google.common.collect.ImmutableList;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-
-import me.lucko.luckperms.common.locale.Message;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.common.plugin.logging.PluginLogger;
+import me.lucko.luckperms.common.storage.StorageMetadata;
 import me.lucko.luckperms.common.storage.implementation.sql.connection.ConnectionFactory;
 import me.lucko.luckperms.common.storage.misc.StorageCredentials;
-
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -84,7 +79,7 @@ public abstract class HikariConnectionFactory implements ConnectionFactory {
      *
      * @param properties the current properties
      */
-    protected void overrideProperties(Map<String, String> properties) {
+    protected void overrideProperties(Map<String, Object> properties) {
         // https://github.com/brettwooldridge/HikariCP/wiki/Rapid-Recovery
         properties.putIfAbsent("socketTimeout", String.valueOf(TimeUnit.SECONDS.toMillis(30)));
     }
@@ -95,8 +90,8 @@ public abstract class HikariConnectionFactory implements ConnectionFactory {
      * @param config the hikari config
      * @param properties the properties
      */
-    protected void setProperties(HikariConfig config, Map<String, String> properties) {
-        for (Map.Entry<String, String> property : properties.entrySet()) {
+    protected void setProperties(HikariConfig config, Map<String, Object> properties) {
+        for (Map.Entry<String, Object> property : properties.entrySet()) {
             config.addDataSourceProperty(property.getKey(), property.getValue());
         }
     }
@@ -134,7 +129,7 @@ public abstract class HikariConnectionFactory implements ConnectionFactory {
         }
 
         // get the extra connection properties from the config
-        Map<String, String> properties = new HashMap<>(this.configuration.getProperties());
+        Map<String, Object> properties = new HashMap<>(this.configuration.getProperties());
 
         // allow the implementation to override/make changes to these properties
         overrideProperties(properties);
@@ -180,11 +175,12 @@ public abstract class HikariConnectionFactory implements ConnectionFactory {
     }
 
     @Override
-    public Map<Component, Component> getMeta() {
-        Map<Component, Component> meta = new LinkedHashMap<>();
-        boolean success = true;
+    public StorageMetadata getMeta() {
+        StorageMetadata metadata = new StorageMetadata();
 
+        boolean success = true;
         long start = System.currentTimeMillis();
+
         try (Connection c = getConnection()) {
             try (Statement s = c.createStatement()) {
                 s.execute("/* ping */ SELECT 1");
@@ -194,18 +190,12 @@ public abstract class HikariConnectionFactory implements ConnectionFactory {
         }
 
         if (success) {
-            long duration = System.currentTimeMillis() - start;
-            meta.put(
-                    Component.translatable("luckperms.command.info.storage.meta.ping-key"),
-                    Component.text(duration + "ms", NamedTextColor.GREEN)
-            );
+            int duration = (int) (System.currentTimeMillis() - start);
+            metadata.ping(duration);
         }
-        meta.put(
-                Component.translatable("luckperms.command.info.storage.meta.connected-key"),
-                Message.formatBoolean(success)
-        );
 
-        return meta;
+        metadata.connected(success);
+        return metadata;
     }
 
     // dumb plugins seem to keep doing stupid stuff with shading of SLF4J and Log4J.

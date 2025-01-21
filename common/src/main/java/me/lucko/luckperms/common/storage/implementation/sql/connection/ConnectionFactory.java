@@ -26,15 +26,11 @@
 package me.lucko.luckperms.common.storage.implementation.sql.connection;
 
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
-
-import net.kyori.adventure.text.Component;
+import me.lucko.luckperms.common.storage.StorageMetadata;
+import me.lucko.luckperms.common.storage.implementation.sql.StatementProcessor;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.function.Function;
 
 public interface ConnectionFactory {
 
@@ -44,11 +40,9 @@ public interface ConnectionFactory {
 
     void shutdown() throws Exception;
 
-    default Map<Component, Component> getMeta() {
-        return new LinkedHashMap<>();
-    }
+    StorageMetadata getMeta();
 
-    Function<String, String> getStatementProcessor();
+    StatementProcessor getStatementProcessor();
 
     Connection getConnection() throws SQLException;
 

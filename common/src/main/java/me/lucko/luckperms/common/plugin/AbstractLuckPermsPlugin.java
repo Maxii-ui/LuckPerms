@@ -38,6 +38,7 @@ import me.lucko.luckperms.common.config.generic.adapter.SystemPropertyConfigAdap
 import me.lucko.luckperms.common.context.calculator.ConfigurationContextCalculator;
 import me.lucko.luckperms.common.dependencies.Dependency;
 import me.lucko.luckperms.common.dependencies.DependencyManager;
+import me.lucko.luckperms.common.dependencies.DependencyManagerImpl;
 import me.lucko.luckperms.common.event.AbstractEventBus;
 import me.lucko.luckperms.common.event.EventDispatcher;
 import me.lucko.luckperms.common.event.gen.GeneratedEventClass;
@@ -51,21 +52,22 @@ import me.lucko.luckperms.common.locale.TranslationRepository;
 import me.lucko.luckperms.common.messaging.InternalMessagingService;
 import me.lucko.luckperms.common.messaging.MessagingFactory;
 import me.lucko.luckperms.common.plugin.logging.PluginLogger;
+import me.lucko.luckperms.common.plugin.util.HealthCheckResult;
 import me.lucko.luckperms.common.storage.Storage;
 import me.lucko.luckperms.common.storage.StorageFactory;
-import me.lucko.luckperms.common.storage.StorageType;
+import me.lucko.luckperms.common.storage.StorageMetadata;
 import me.lucko.luckperms.common.storage.implementation.file.watcher.FileWatcher;
 import me.lucko.luckperms.common.storage.misc.DataConstraints;
 import me.lucko.luckperms.common.tasks.CacheHousekeepingTask;
 import me.lucko.luckperms.common.tasks.ExpireTemporaryTask;
 import me.lucko.luckperms.common.tasks.SyncTask;
+import me.lucko.luckperms.common.treeview.AsyncPermissionRegistry;
 import me.lucko.luckperms.common.treeview.PermissionRegistry;
 import me.lucko.luckperms.common.verbose.VerboseHandler;
 import me.lucko.luckperms.common.webeditor.socket.WebEditorSocket;
 import me.lucko.luckperms.common.webeditor.store.WebEditorStore;
-
 import net.luckperms.api.LuckPerms;
-
+import net.luckperms.api.platform.Health;
 import okhttp3.OkHttpClient;
 
 import java.io.IOException;
@@ -76,8 +78,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -88,10 +93,10 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
     // init during load
     private DependencyManager dependencyManager;
     private TranslationManager translationManager;
+    private AsyncPermissionRegistry permissionRegistry;
+    private VerboseHandler verboseHandler;
 
     // init during enable
-    private VerboseHandler verboseHandler;
-    private PermissionRegistry permissionRegistry;
     private LogDispatcher logDispatcher;
     private LuckPermsConfiguration configuration;
     private OkHttpClient httpClient;
@@ -109,12 +114,14 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
     private EventDispatcher eventDispatcher;
     private SimpleExtensionManager extensionManager;
 
+    private boolean running = false;
+
     /**
      * Performs the initial actions to load the plugin
      */
     public final void load() {
         // load dependencies
-        this.dependencyManager = new DependencyManager(this);
+        this.dependencyManager = createDependencyManager();
         this.dependencyManager.loadDependencies(getGlobalDependencies());
 
         // load translations
@@ -122,7 +129,8 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
         this.translationManager.reload();
 
         // load some utilities early
-        this.permissionRegistry = new PermissionRegistry(getBootstrap().getScheduler());
+        this.permissionRegistry = new AsyncPermissionRegistry(getBootstrap().getScheduler());
+        this.verboseHandler = new VerboseHandler(getBootstrap().getScheduler());
     }
 
     public final void enable() {
@@ -132,8 +140,7 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
         // send the startup banner
         Message.STARTUP_BANNER.send(getConsoleSender(), getBootstrap());
 
-        // load some utilities early
-        this.verboseHandler = new VerboseHandler(getBootstrap().getScheduler());
+        // setup log dispatcher instance early
         this.logDispatcher = new LogDispatcher(this);
 
         // load configuration
@@ -150,8 +157,17 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
                 .callTimeout(15, TimeUnit.SECONDS)
                 .build();
 
-        this.bytebin = new BytebinClient(this.httpClient, getConfiguration().get(ConfigKeys.BYTEBIN_URL), "luckperms");
-        this.bytesocks = new BytesocksClient(this.httpClient, getConfiguration().get(ConfigKeys.BYTESOCKS_HOST), "luckperms/editor");
+        this.bytebin = new BytebinClient(
+                this.httpClient,
+                getConfiguration().get(ConfigKeys.BYTEBIN_URL),
+                "luckperms"
+        );
+        this.bytesocks = new BytesocksClient(
+                this.httpClient,
+                getConfiguration().get(ConfigKeys.BYTESOCKS_HOST),
+                getConfiguration().get(ConfigKeys.BYTESOCKS_USE_TLS),
+                "luckperms/editor"
+        );
         this.webEditorStore = new WebEditorStore(this);
 
         // init translation repo and update bundle files
@@ -160,8 +176,12 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
 
         // now the configuration is loaded, we can create a storage factory and load initial dependencies
         StorageFactory storageFactory = new StorageFactory(this);
-        Set<StorageType> storageTypes = storageFactory.getRequiredTypes();
-        this.dependencyManager.loadStorageDependencies(storageTypes);
+        this.dependencyManager.loadStorageDependencies(
+                storageFactory.getRequiredTypes(),
+                getConfiguration().get(ConfigKeys.REDIS_ENABLED),
+                getConfiguration().get(ConfigKeys.RABBITMQ_ENABLED),
+                getConfiguration().get(ConfigKeys.NATS_ENABLED)
+        );
 
         // register listeners
         registerPlatformListeners();
@@ -173,7 +193,7 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
                 this.fileWatcher = new FileWatcher(this, getBootstrap().getDataDirectory());
             } catch (Throwable e) {
                 // catch throwable here, seems some JVMs throw UnsatisfiedLinkError when trying
-                // to create a watch service. see: https://github.com/lucko/LuckPerms/issues/2066
+                // to create a watch service. see: https://github.com/LuckPerms/LuckPerms/issues/2066
                 getLogger().warn("Error occurred whilst trying to create a file watcher:", e);
             }
         }
@@ -237,6 +257,9 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
         // perform any platform-specific final setup tasks
         performFinalSetup();
 
+        // mark as running
+        this.running = true;
+
         Duration timeTaken = Duration.between(getBootstrap().getStartupTime(), Instant.now());
         getLogger().info("Successfully enabled. (took " + timeTaken.toMillis() + "ms)");
     }
@@ -260,6 +283,9 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
 
         // unload extensions
         this.extensionManager.close();
+
+        // mark as not running
+        this.running = false;
 
         // remove any hooks into the platform
         removePlatformHooks();
@@ -289,6 +315,9 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
         this.httpClient.dispatcher().executorService().shutdown();
         this.httpClient.connectionPool().evictAll();
 
+        // close isolated loaders for non-relocated dependencies
+        getDependencyManager().close();
+
         // close classpath appender
         getBootstrap().getClassPathAppender().close();
 
@@ -296,6 +325,10 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
     }
 
     // hooks called during load
+
+    protected DependencyManager createDependencyManager() {
+        return new DependencyManagerImpl(this);
+    }
 
     protected Set<Dependency> getGlobalDependencies() {
         return EnumSet.of(
@@ -363,6 +396,31 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
         if (this.messagingService == null) {
             this.messagingService = messagingService;
         }
+    }
+
+    @Override
+    public Health runHealthCheck() {
+        if (!this.running) {
+            return HealthCheckResult.unhealthy(Collections.emptyMap());
+        }
+
+        StorageMetadata meta = this.storage.getMeta();
+        if (meta.connected() != null && !meta.connected()) {
+            return HealthCheckResult.unhealthy(Collections.singletonMap("reason", "storage disconnected"));
+        }
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        if (meta.connected() != null) {
+            map.put("storageConnected", meta.connected());
+        }
+        if (meta.ping() != null) {
+            map.put("storagePing", meta.ping());
+        }
+        if (meta.sizeBytes() != null) {
+            map.put("storageSizeBytes", meta.sizeBytes());
+        }
+
+        return HealthCheckResult.healthy(map);
     }
 
     @Override
@@ -440,6 +498,10 @@ public abstract class AbstractLuckPermsPlugin implements LuckPermsPlugin {
     @Override
     public LuckPermsConfiguration getConfiguration() {
         return this.configuration;
+    }
+
+    public OkHttpClient getHttpClient() {
+        return this.httpClient;
     }
 
     @Override

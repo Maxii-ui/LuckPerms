@@ -28,12 +28,9 @@ package me.lucko.luckperms.common.commands.group;
 import me.lucko.luckperms.common.actionlog.LoggedAction;
 import me.lucko.luckperms.common.bulkupdate.BulkUpdate;
 import me.lucko.luckperms.common.bulkupdate.BulkUpdateBuilder;
+import me.lucko.luckperms.common.bulkupdate.BulkUpdateField;
 import me.lucko.luckperms.common.bulkupdate.DataType;
 import me.lucko.luckperms.common.bulkupdate.action.DeleteAction;
-import me.lucko.luckperms.common.bulkupdate.comparison.Constraint;
-import me.lucko.luckperms.common.bulkupdate.comparison.StandardComparison;
-import me.lucko.luckperms.common.bulkupdate.query.Query;
-import me.lucko.luckperms.common.bulkupdate.query.QueryField;
 import me.lucko.luckperms.common.command.abstraction.SingleCommand;
 import me.lucko.luckperms.common.command.access.ArgumentPermissions;
 import me.lucko.luckperms.common.command.access.CommandPermission;
@@ -43,6 +40,7 @@ import me.lucko.luckperms.common.command.tabcomplete.TabCompleter;
 import me.lucko.luckperms.common.command.tabcomplete.TabCompletions;
 import me.lucko.luckperms.common.command.utils.ArgumentList;
 import me.lucko.luckperms.common.config.ConfigKeys;
+import me.lucko.luckperms.common.filter.Comparison;
 import me.lucko.luckperms.common.locale.Message;
 import me.lucko.luckperms.common.messaging.InternalMessagingService;
 import me.lucko.luckperms.common.model.Group;
@@ -50,8 +48,8 @@ import me.lucko.luckperms.common.model.manager.group.GroupManager;
 import me.lucko.luckperms.common.node.types.Inheritance;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.common.sender.Sender;
+import me.lucko.luckperms.common.storage.misc.DataConstraints;
 import me.lucko.luckperms.common.util.Predicates;
-
 import net.luckperms.api.actionlog.Action;
 import net.luckperms.api.event.cause.DeletionCause;
 
@@ -72,6 +70,10 @@ public class DeleteGroup extends SingleCommand {
         }
 
         String groupName = args.get(0).toLowerCase(Locale.ROOT);
+        if (!DataConstraints.GROUP_NAME_TEST.test(groupName)) {
+            Message.GROUP_INVALID_ENTRY.send(sender, groupName);
+            return;
+        }
 
         if (groupName.equalsIgnoreCase(GroupManager.DEFAULT_GROUP_NAME)) {
             Message.DELETE_GROUP_ERROR_DEFAULT.send(sender);
@@ -111,7 +113,7 @@ public class DeleteGroup extends SingleCommand {
                     .trackStatistics(false)
                     .dataType(DataType.ALL)
                     .action(DeleteAction.create())
-                    .query(Query.of(QueryField.PERMISSION, Constraint.of(StandardComparison.EQUAL, Inheritance.key(groupName))))
+                    .filter(BulkUpdateField.PERMISSION, Comparison.EQUAL, Inheritance.key(groupName))
                     .build();
             plugin.getStorage().applyBulkUpdate(operation).whenCompleteAsync((v, ex) -> {
                 if (ex != null) {

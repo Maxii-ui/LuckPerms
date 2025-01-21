@@ -28,7 +28,6 @@ package me.lucko.luckperms.bukkit.listeners;
 import me.lucko.luckperms.bukkit.LPBukkitPlugin;
 import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.locale.Message;
-
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.EventHandler;
@@ -38,11 +37,10 @@ import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.event.server.RemoteServerCommandEvent;
 import org.bukkit.event.server.ServerCommandEvent;
 
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 public class BukkitPlatformListener implements Listener {
-    private static final Pattern OP_COMMAND_PATTERN = Pattern.compile("^/?(\\w+:)?(deop|op)( .*)?$");
+    private static final Pattern OP_COMMAND_PATTERN = Pattern.compile("^/?(\\w+:)?(deop|op)( .*)?$", Pattern.CASE_INSENSITIVE);
 
     private final LPBukkitPlugin plugin;
 
@@ -52,17 +50,17 @@ public class BukkitPlatformListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerCommand(PlayerCommandPreprocessEvent e) {
-        handleCommand(e.getPlayer(), e.getMessage().toLowerCase(Locale.ROOT), e);
+        handleCommand(e.getPlayer(), e.getMessage(), e);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onServerCommand(ServerCommandEvent e) {
-        handleCommand(e.getSender(), e.getCommand().toLowerCase(Locale.ROOT), e);
+        handleCommand(e.getSender(), e.getCommand(), e);
     }
 
     @EventHandler(ignoreCancelled = true)
     public void onRemoteServerCommand(RemoteServerCommandEvent e) {
-        handleCommand(e.getSender(), e.getCommand().toLowerCase(Locale.ROOT), e);
+        handleCommand(e.getSender(), e.getCommand(), e);
     }
 
     private void handleCommand(CommandSender sender, String cmdLine, Cancellable event) {

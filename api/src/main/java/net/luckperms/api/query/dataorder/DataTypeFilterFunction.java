@@ -28,7 +28,6 @@ package net.luckperms.api.query.dataorder;
 import net.luckperms.api.model.PermissionHolder;
 import net.luckperms.api.model.data.DataType;
 import net.luckperms.api.query.OptionKey;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Objects;
@@ -49,7 +48,7 @@ public interface DataTypeFilterFunction {
 
     /**
      * Creates a {@link DataTypeFilterFunction} that always returns the given
-     * {@code predicate}.
+     * {@code predicate} (commonly one of the values in {@link DataTypeFilter}).
      *
      * @param predicate the predicate
      * @return the data type filter function

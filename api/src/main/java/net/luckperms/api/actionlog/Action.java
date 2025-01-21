@@ -26,9 +26,9 @@
 package net.luckperms.api.actionlog;
 
 import net.luckperms.api.LuckPermsProvider;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
+import org.jetbrains.annotations.ApiStatus.NonExtendable;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -36,7 +36,10 @@ import java.util.UUID;
 
 /**
  * Represents a logged action.
+ *
+ * <p>API users should not implement this interface directly.</p>
  */
+@NonExtendable
 public interface Action extends Comparable<Action> {
 
     /**
@@ -82,6 +85,7 @@ public interface Action extends Comparable<Action> {
     /**
      * Represents the source of an action.
      */
+    @NonExtendable
     interface Source {
 
         /**
@@ -103,6 +107,7 @@ public interface Action extends Comparable<Action> {
     /**
      * Represents the target of an action.
      */
+    @NonExtendable
     interface Target {
 
         /**
@@ -127,7 +132,7 @@ public interface Action extends Comparable<Action> {
         @NonNull Type getType();
 
         /**
-         * Represents the type of a {@link Target}.
+         * Represents the type of {@link Target}.
          */
         enum Type {
             USER, GROUP, TRACK

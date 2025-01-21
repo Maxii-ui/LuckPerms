@@ -26,7 +26,6 @@
 package me.lucko.luckperms.common.locale;
 
 import com.google.common.collect.Maps;
-
 import me.lucko.luckperms.common.actionlog.LoggedAction;
 import me.lucko.luckperms.common.model.Group;
 import me.lucko.luckperms.common.model.HolderType;
@@ -37,13 +36,15 @@ import me.lucko.luckperms.common.plugin.AbstractLuckPermsPlugin;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.common.plugin.bootstrap.LuckPermsBootstrap;
 import me.lucko.luckperms.common.sender.Sender;
+import me.lucko.luckperms.common.storage.StorageMetadata;
 import me.lucko.luckperms.common.util.DurationFormatter;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.ComponentLike;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.luckperms.api.context.Context;
 import net.luckperms.api.context.ContextSet;
@@ -55,8 +56,11 @@ import net.luckperms.api.node.types.InheritanceNode;
 import net.luckperms.api.node.types.MetaNode;
 import net.luckperms.api.util.Tristate;
 
+import java.text.DecimalFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -90,10 +94,13 @@ import static net.kyori.adventure.text.format.TextDecoration.BOLD;
  */
 public interface Message {
 
+    static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd '@' HH:mm:ss")
+            .withZone(ZoneId.systemDefault());
+
     TextComponent OPEN_BRACKET = Component.text('(');
     TextComponent CLOSE_BRACKET = Component.text(')');
     TextComponent FULL_STOP = Component.text('.');
-
+    
     Component PREFIX_COMPONENT = text()
             .color(GRAY)
             .append(text('['))
@@ -132,7 +139,7 @@ public interface Message {
         // "  |    |__)   "
         // "  |___ |      "
 
-        return join(newline(),
+        return joinNewline(
                 text()
                         .append(text("       ", AQUA))
                         .append(text(" __    ", DARK_AQUA))
@@ -172,7 +179,7 @@ public interface Message {
             .color(GRAY)
     );
 
-    Args2<String, String> FIRST_TIME_SETUP = (label, username) -> join(newline(),
+    Args2<String, String> FIRST_TIME_SETUP = (label, username) -> joinNewline(
             // "&3It seems that no permissions have been setup yet!"
             // "&3Before you can use any of the LuckPerms commands in-game, you need to use the console to give yourself access."
             // "&3Open your console and run:"
@@ -275,7 +282,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args1<LoggedAction> LOG = action -> join(newline(),
+    Args1<LoggedAction> LOG = action -> joinNewline(
             // "&3LOG &3&l> &8(&e{}&8) [&a{}&8] (&b{}&8)"
             // "&3LOG &3&l> &f{}"
             prefixed(text()
@@ -293,7 +300,7 @@ public interface Message {
                     .append(text()
                             .color(DARK_GRAY)
                             .append(text('['))
-                            .append(text(LoggedAction.getTypeCharacter(action.getTarget().getType()), GREEN))
+                            .append(text(LoggedAction.getTypeString(action.getTarget().getType()), GREEN))
                             .append(text(']'))
                     )
                     .append(space())
@@ -486,7 +493,7 @@ public interface Message {
                     .append(CLOSE_BRACKET)
             ));
 
-    Args2<String, Component> COMMAND_USAGE_DETAILED_HEADER = (name, usage) -> join(newline(),
+    Args2<String, Component> COMMAND_USAGE_DETAILED_HEADER = (name, usage) -> joinNewline(
             // "&3&lCommand Usage &3- &b{}"
             // "&b> &7{}"
             prefixed(text()
@@ -663,7 +670,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args0 VERBOSE_OFF_COMMAND_NO_CHECKS = () -> join(newline(),
+    Args0 VERBOSE_OFF_COMMAND_NO_CHECKS = () -> joinNewline(
             // &bThe command execution completed, but no permission checks were made.
             // &7This might be because the plugin runs commands in the background (async). You can still use verbose manually to detect checks made like this.
             prefixed(translatable()
@@ -702,7 +709,7 @@ public interface Message {
             .args(translatable("luckperms.command.verbose.disabled-term", RED))
     );
 
-    Args1<String> VERBOSE_RESULTS_URL = url -> join(newline(),
+    Args1<String> VERBOSE_RESULTS_URL = url -> joinNewline(
             // "&aVerbose results URL:"
             // <link>
             prefixed(translatable()
@@ -728,7 +735,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args1<String> TREE_URL = url -> join(newline(),
+    Args1<String> TREE_URL = url -> joinNewline(
             // "&aPermission tree URL:"
             // <link>
             prefixed(translatable()
@@ -883,7 +890,7 @@ public interface Message {
             .apply(builder -> {
                 boolean explicitGlobalContext = !plugin.getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                Component hover = join(newline(),
+                Component hover = joinNewline(
                         text()
                                 .append(text('>', DARK_AQUA))
                                 .append(space())
@@ -927,7 +934,7 @@ public interface Message {
             .apply(builder -> {
                 boolean explicitGlobalContext = !plugin.getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                Component hover = join(newline(),
+                Component hover = joinNewline(
                         text()
                                 .append(text('>', DARK_AQUA))
                                 .append(space())
@@ -946,7 +953,7 @@ public interface Message {
             })
             .build();
 
-    Args2<String, String> APPLY_EDITS_SESSION_UNKNOWN = (code, label) -> join(newline(),
+    Args2<String, String> APPLY_EDITS_SESSION_UNKNOWN = (code, label) -> joinNewline(
             // "&4The changes received from the web editor were not made in a session started on this server!"
             // "&cAre you sure you're running the /lp applyedits command in the right place?"
             // "&cTo ignore this warning and apply the changes anyway, run: &4/lp applyedits <code> --force"
@@ -964,7 +971,7 @@ public interface Message {
                     .append(text("/" + label + " applyedits " + code + " --force", DARK_RED)))
     );
 
-    Args2<String, String> APPLY_EDITS_SESSION_APPLIED_ALREADY = (code, label) -> join(newline(),
+    Args2<String, String> APPLY_EDITS_SESSION_APPLIED_ALREADY = (code, label) -> joinNewline(
             // "&4The changes received from the web editor are based on an initial session which has already been applied!"
             // "&cTo avoid conflicts, you should never re-use the same editor session after the changes from it have been applied once already."
             // "&cTo ignore this warning and apply the changes anyway, run: /lp applyedits <code> --force"
@@ -1146,7 +1153,7 @@ public interface Message {
             .key("luckperms.command.editor.start")
     );
 
-    Args1<String> EDITOR_URL = url -> join(newline(),
+    Args1<String> EDITOR_URL = url -> joinNewline(
             // "&aClick the link below to open the editor:"
             // <link>
             prefixed(translatable()
@@ -1180,7 +1187,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args4<String, String, String, Boolean> EDITOR_SOCKET_UNTRUSTED = (nonce, browser, cmdLabel, console) -> join(newline(),
+    Args4<String, String, String, Boolean> EDITOR_SOCKET_UNTRUSTED = (nonce, browser, cmdLabel, console) -> joinNewline(
             // "&bAn editor window has connected, but it is not yet trusted."
             // "&8(&7session id = &faaaaa&7, browser = &fChrome on Windows 10&8)"
             // "&7If it was you, &aclick here&7 to trust the session!"
@@ -1226,7 +1233,7 @@ public interface Message {
                     }))
     );
 
-    Args0 EDITOR_SOCKET_TRUST_SUCCESS = () -> join(newline(),
+    Args0 EDITOR_SOCKET_TRUST_SUCCESS = () -> joinNewline(
             // "&aThe editor session has been marked as trusted."
             // "&7In the future, connections from the same browser will be trusted automatically."
             // "&7The plugin will now attempt to establish a connection with the editor..."
@@ -1530,7 +1537,7 @@ public interface Message {
             )
     );
 
-    Args2<LuckPermsPlugin, Map<Component, Component>> INFO = (plugin, storageMeta) -> join(newline(),
+    Args2<LuckPermsPlugin, StorageMetadata> INFO = (plugin, storageMeta) -> joinNewline(
             // "&2Running &bLuckPerms v{}&2 by &bLuck&2."
             // "&f-  &3Platform: &f{}"
             // "&f-  &3Server Brand: &f{}"
@@ -1593,14 +1600,39 @@ public interface Message {
                                 .append(text(plugin.getStorage().getName(), WHITE))
                         );
 
-                        for (Map.Entry<Component, Component> metaEntry : storageMeta.entrySet()) {
+                        if (storageMeta.connected() != null) {
                             builder.append(newline());
                             builder.append(prefixed(text()
                                     .color(DARK_AQUA)
                                     .append(text("     "))
-                                    .append(metaEntry.getKey())
+                                    .append(translatable("luckperms.command.info.storage.meta.connected-key"))
                                     .append(text(": "))
-                                    .append(metaEntry.getValue())
+                                    .append(formatBoolean(storageMeta.connected()))
+                            ));
+                        }
+
+                        if (storageMeta.ping() != null) {
+                            builder.append(newline());
+                            builder.append(prefixed(text()
+                                    .color(DARK_AQUA)
+                                    .append(text("     "))
+                                    .append(translatable("luckperms.command.info.storage.meta.ping-key"))
+                                    .append(text(": "))
+                                    .append(text(storageMeta.ping() + "ms", GREEN))
+                            ));
+                        }
+
+                        if (storageMeta.sizeBytes() != null) {
+                            DecimalFormat format = new DecimalFormat("#.##");
+                            String size = format.format(storageMeta.sizeBytes() / 1048576D) + "MB";
+
+                            builder.append(newline());
+                            builder.append(prefixed(text()
+                                    .color(DARK_AQUA)
+                                    .append(text("     "))
+                                    .append(translatable("luckperms.command.info.storage.meta.file-size-key"))
+                                    .append(text(": "))
+                                    .append(text(size, GREEN))
                             ));
                         }
                     })),
@@ -1765,7 +1797,7 @@ public interface Message {
                 String holderName = holder.getType() == HolderType.GROUP ? holder.getIdentifier().getName() : holder.getPlainDisplayName();
                 boolean explicitGlobalContext = !holder.getPlugin().getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                Component hover = join(newline(),
+                Component hover = joinNewline(
                         text()
                                 .append(text('>', DARK_AQUA))
                                 .append(space())
@@ -1784,7 +1816,7 @@ public interface Message {
             })
             .build();
 
-    Args3<Node, PermissionHolder, String> PERMISSION_INFO_TEMPORARY_NODE_ENTRY = (node, holder, label) -> join(newline(),
+    Args3<Node, PermissionHolder, String> PERMISSION_INFO_TEMPORARY_NODE_ENTRY = (node, holder, label) -> joinNewline(
             text()
                     .append(text('>', DARK_AQUA))
                     .append(space())
@@ -1795,7 +1827,7 @@ public interface Message {
                         String holderName = holder.getType() == HolderType.GROUP ? holder.getIdentifier().getName() : holder.getPlainDisplayName();
                         boolean explicitGlobalContext = !holder.getPlugin().getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                        Component hover = join(newline(),
+                        Component hover = joinNewline(
                                 text()
                                         .append(text('>', DARK_AQUA))
                                         .append(space())
@@ -1865,7 +1897,7 @@ public interface Message {
                         String holderName = holder.getType() == HolderType.GROUP ? holder.getIdentifier().getName() : holder.getPlainDisplayName();
                         boolean explicitGlobalContext = !holder.getPlugin().getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                        Component hover = join(newline(),
+                        Component hover = joinNewline(
                                 text()
                                         .append(text('>', DARK_AQUA))
                                         .append(space())
@@ -1887,7 +1919,7 @@ public interface Message {
             .append(formatContextSetBracketed(node.getContexts(), empty()))
             .build();
 
-    Args3<InheritanceNode, PermissionHolder, String> PARENT_INFO_TEMPORARY_NODE_ENTRY = (node, holder, label) -> join(newline(),
+    Args3<InheritanceNode, PermissionHolder, String> PARENT_INFO_TEMPORARY_NODE_ENTRY = (node, holder, label) -> joinNewline(
             text()
                     .append(text('>', DARK_AQUA))
                     .append(space())
@@ -1898,7 +1930,7 @@ public interface Message {
                                 String holderName = holder.getType() == HolderType.GROUP ? holder.getIdentifier().getName() : holder.getPlainDisplayName();
                                 boolean explicitGlobalContext = !holder.getPlugin().getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                                Component hover = join(newline(),
+                                Component hover = joinNewline(
                                         text()
                                                 .append(text('>', DARK_AQUA))
                                                 .append(text(node.getGroupName(), WHITE)),
@@ -1935,13 +1967,25 @@ public interface Message {
             .append(text(':'))
     );
 
-    Args2<String, Component> LIST_TRACKS_ENTRY = (name, path) -> text()
-            // "&a{}: {}"
-            .color(GREEN)
-            .append(text(name))
-            .append(text(": "))
-            .append(path)
-            .build();
+    Args3<String, ContextSet, Component> LIST_TRACKS_ENTRY = (name, contextSet, path) -> joinNewline(
+            // "&3> &a{}: {}"
+            // "&7  ({}&7)"
+            text()
+                    .append(text('>', DARK_AQUA))
+                    .append(space())
+                    .append(text().color(GREEN)
+                            .append(text(name))
+                            .append(text(": "))
+                            .append(formatContextSetBracketed(contextSet, empty()))
+                            .build()
+                    ),
+            text()
+                    .color(GRAY)
+                    .append(text("  "))
+                    .append(OPEN_BRACKET)
+                    .append(path)
+                    .append(CLOSE_BRACKET)
+    );
 
     Args1<PermissionHolder> LIST_TRACKS_EMPTY = holder -> prefixed(translatable()
             // "&b{}&a is not on any tracks."
@@ -2025,7 +2069,7 @@ public interface Message {
             )
     );
 
-    Args5<String, Tristate, String, Node, ContextSet> PERMISSION_CHECK_RESULT = (permission, result, processor, causeNode, context) -> join(newline(),
+    Args5<String, Tristate, String, Node, ContextSet> PERMISSION_CHECK_RESULT = (permission, result, processor, causeNode, context) -> joinNewline(
             // &aPermission check for &b{}&a:
             //     &3Result: {}
             //     &3Processor: &f{}
@@ -2200,12 +2244,17 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args0 PERMISSION_INVALID_ENTRY_EMPTY = () -> prefixed(translatable()
-            // "&cThe empty string is not a valid permission."
-            .key("luckperms.command.misc.permission-invalid-empty")
+    Args1<String> INVALID_INPUT_EMPTY = s -> prefixed(translatable()
+            // "&cThe empty string is not a valid {s}."
+            .key("luckperms.command.misc.invalid-input-empty-" + s)
             .color(RED)
             .append(FULL_STOP)
     );
+
+    // Predefined shorthands for the above message
+    Args0 INVALID_PERMISSION_EMPTY = () -> INVALID_INPUT_EMPTY.build("permission");
+    Args0 INVALID_META_KEY_EMPTY = () -> INVALID_INPUT_EMPTY.build("meta-key");
+    Args0 INVALID_DISPLAY_NAME_EMPTY = () -> INVALID_INPUT_EMPTY.build("display-name");
 
     Args3<PermissionHolder, Group, ContextSet> SET_INHERIT_SUCCESS = (holder, parent, context) -> prefixed(translatable()
             // "&b{}&a now inherits permissions from &b{}&a in context {}&a."
@@ -2496,7 +2545,7 @@ public interface Message {
                         HolderType originType = HolderType.valueOf(origin.getOrigin().getType().toUpperCase(Locale.ROOT));
                         boolean explicitGlobalContext = !holder.getPlugin().getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                        Component hover = join(newline(),
+                        Component hover = joinNewline(
                                 text()
                                         .append(text('>', DARK_AQUA))
                                         .append(space())
@@ -2571,7 +2620,7 @@ public interface Message {
                         HolderType originType = HolderType.valueOf(origin.getOrigin().getType().toUpperCase(Locale.ROOT));
                         boolean explicitGlobalContext = !holder.getPlugin().getConfiguration().getContextsFile().getDefaultContexts().isEmpty();
 
-                        Component hover = join(newline(),
+                        Component hover = joinNewline(
                                 text()
                                         .append(text('>', DARK_AQUA))
                                         .append(space())
@@ -2967,7 +3016,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args3<Integer, Integer, Integer> BULK_UPDATE_STATISTICS = (nodes, users, groups) -> join(newline(),
+    Args3<Integer, Integer, Integer> BULK_UPDATE_STATISTICS = (nodes, users, groups) -> joinNewline(
             // "&bTotal affected nodes: &a{}"
             // "&bTotal affected users: &a{}"
             // "&bTotal affected groups: &a{}"
@@ -3049,7 +3098,7 @@ public interface Message {
             })
     );
 
-    Args1<String> TRANSLATIONS_DOWNLOAD_PROMPT = label -> join(newline(),
+    Args1<String> TRANSLATIONS_DOWNLOAD_PROMPT = label -> joinNewline(
             // "Use /lp translations install to download and install up-to-date versions of these translations provided by the community."
             // "Please note that this will override any changes you've made for these languages."
             prefixed(translatable()
@@ -3093,7 +3142,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args4<String, String, Component, Boolean> USER_INFO_GENERAL = (username, uuid, uuidType, online) -> join(newline(),
+    Args4<String, String, Component, Boolean> USER_INFO_GENERAL = (username, uuid, uuidType, online) -> joinNewline(
             // "&b&l> &bUser Info: &f{}"
             // "&f- &3UUID: &f{}"
             // "&f    &7(type: {}&7)"
@@ -3127,7 +3176,7 @@ public interface Message {
                     .append(online ? translatable("luckperms.command.user.info.status.online", GREEN) : translatable("luckperms.command.user.info.status.offline", RED)))
     );
 
-    Args6<Boolean, ContextSet, String, String, String, Map<String, List<String>>> USER_INFO_CONTEXTUAL_DATA = (active, contexts, prefix, suffix, primaryGroup, meta) -> join(newline(),
+    Args6<Boolean, ContextSet, String, String, String, Map<String, List<String>>> USER_INFO_CONTEXTUAL_DATA = (active, contexts, prefix, suffix, primaryGroup, meta) -> joinNewline(
             // "&f- &aContextual Data: &7(mode: {}&7)"
             // "    &3Contexts: {}"
             // "    &3Prefix: {}"
@@ -3214,7 +3263,7 @@ public interface Message {
                                             .build()
                                     )
                                     .collect(Collectors.toList());
-                            builder.append(join(space(), entries));
+                            builder.append(join(JoinConfiguration.separator(space()), entries));
                         }
                     }))
     );
@@ -3241,7 +3290,7 @@ public interface Message {
             .append(formatContextSetBracketed(node.getContexts(), empty()))
     );
 
-    Args1<InheritanceNode> INFO_PARENT_TEMPORARY_NODE_ENTRY = node -> join(newline(),
+    Args1<InheritanceNode> INFO_PARENT_TEMPORARY_NODE_ENTRY = node -> joinNewline(
             prefixed(text()
                     .append(text("    > ", DARK_AQUA))
                     .append(text(node.getGroupName(), WHITE))
@@ -3370,7 +3419,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args1<String> USER_PROMOTE_ERROR_MALFORMED = name -> join(newline(),
+    Args1<String> USER_PROMOTE_ERROR_MALFORMED = name -> joinNewline(
             // "&aThe next group on the track, &b{}&a, no longer exists. Unable to promote user."
             // "&aEither create the group, or remove it from the track and try again."
             prefixed(translatable()
@@ -3424,7 +3473,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args1<String> USER_DEMOTE_ERROR_MALFORMED = name -> join(newline(),
+    Args1<String> USER_DEMOTE_ERROR_MALFORMED = name -> joinNewline(
             // "&aThe previous group on the track, &b{}&a, no longer exists. Unable to demote user."
             // "&aEither create the group, or remove it from the track and try again."
             prefixed(translatable()
@@ -3441,7 +3490,7 @@ public interface Message {
                     .append(FULL_STOP))
     );
 
-    Args3<String, String, OptionalInt> GROUP_INFO_GENERAL = (name, displayName, weight) -> join(newline(),
+    Args3<String, String, OptionalInt> GROUP_INFO_GENERAL = (name, displayName, weight) -> joinNewline(
             // "&b&l> &bGroup Info: &f{}"
             // "&f- &3Display Name: &f{}"
             // "&f- &3Weight: &f{}"
@@ -3466,7 +3515,7 @@ public interface Message {
                     .append(weight.isPresent() ? text(weight.getAsInt(), WHITE) : translatable("luckperms.command.generic.contextual-data.null-result", WHITE)))
     );
 
-    Args3<String, String, Map<String, List<String>>> GROUP_INFO_CONTEXTUAL_DATA = (prefix, suffix, meta) -> join(newline(),
+    Args3<String, String, Map<String, List<String>>> GROUP_INFO_CONTEXTUAL_DATA = (prefix, suffix, meta) -> joinNewline(
             // "&f- &aContextual Data: &7(mode: &8server&7)"
             // "    &3Prefix: {}"
             // "    &3Suffix: {}"
@@ -3539,7 +3588,7 @@ public interface Message {
                                             .build()
                                     )
                                     .collect(Collectors.toList());
-                            builder.append(join(space(), entries));
+                            builder.append(join(JoinConfiguration.separator(space()), entries));
                         }
                     }))
     );
@@ -3595,7 +3644,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args2<String, Component> TRACK_INFO = (name, path) -> join(newline(),
+    Args2<String, Component> TRACK_INFO = (name, path) -> joinNewline(
             // "&b&l> &bShowing Track: &f{}" + "\n" +
             // "&f- &7Path: &f{}",
             prefixed(text()
@@ -3701,7 +3750,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args2<Integer, LoggedAction> LOG_ENTRY = (pos, action) -> join(newline(),
+    Args2<Integer, LoggedAction> LOG_ENTRY = (pos, action) -> joinNewline(
             // "&b#{} &8(&7{} ago&8) &8(&e{}&8) [&a{}&8] (&b{}&8)"
             // "&7> &f{}"
             prefixed(text()
@@ -3714,6 +3763,7 @@ public interface Message {
                                     .color(GRAY)
                                     .key("luckperms.duration.since")
                                     .args(DurationFormatter.CONCISE_LOW_ACCURACY.format(action.getDurationSince()))
+                                    .hoverEvent(HoverEvent.showText(text().append(translatable("luckperms.duration.date", GRAY)).append(text(": ", GRAY)).append(text(DATE_FORMAT.format(action.getTimestamp()), AQUA))))
                             )
                             .append(CLOSE_BRACKET)
                     )
@@ -3728,7 +3778,7 @@ public interface Message {
                     .append(text()
                             .color(DARK_GRAY)
                             .append(text('['))
-                            .append(text(LoggedAction.getTypeCharacter(action.getTarget().getType()), GREEN))
+                            .append(text(LoggedAction.getTypeString(action.getTarget().getType()), GREEN))
                             .append(text(']'))
                     )
                     .append(space())
@@ -3961,7 +4011,7 @@ public interface Message {
             .append(FULL_STOP)
     );
 
-    Args2<String, String> EXPORT_WEB_SUCCESS = (pasteId, label) -> join(newline(),
+    Args2<String, String> EXPORT_WEB_SUCCESS = (pasteId, label) -> joinNewline(
             // "&aExport code: &7{}"
             // "&7Use the following command to import:"
             // "&a/{} import {} --upload"
@@ -3974,7 +4024,8 @@ public interface Message {
                     .key("luckperms.command.export.web.import-command-description")
                     .color(GRAY)
                     .append(text(":")),
-            text("/" + label + " import " + pasteId + " --upload", GREEN));
+            text("/" + label + " import " + pasteId + " --upload", GREEN)
+    );
 
     Args1<String> IMPORT_FILE_DOESNT_EXIST = file -> prefixed(text()
             // "&cError: File &4{}&c does not exist."
@@ -4129,9 +4180,18 @@ public interface Message {
     );
 
     static Component formatColoredValue(String value) {
-        return LegacyComponentSerializer.legacyAmpersand().deserialize(value).toBuilder()
-                .hoverEvent(HoverEvent.showText(text(value, WHITE)))
-                .build();
+        boolean containsLegacyFormattingCharacter = value.indexOf(LegacyComponentSerializer.AMPERSAND_CHAR) != -1
+                || value.indexOf(LegacyComponentSerializer.SECTION_CHAR) != -1;
+
+        HoverEvent<Component> hover = HoverEvent.showText(text(value, WHITE));
+
+        if (containsLegacyFormattingCharacter) {
+            return LegacyComponentSerializer.legacyAmpersand().deserialize(value).toBuilder()
+                    .hoverEvent(hover)
+                    .build();
+        } else {
+            return MiniMessage.miniMessage().deserialize(value).hoverEvent(hover);
+        }
     }
 
     static Component formatContextBracketed(String key, String value) {
@@ -4297,6 +4357,10 @@ public interface Message {
             default:
                 return text("undefined", GRAY);
         }
+    }
+
+    static Component joinNewline(final ComponentLike... components) {
+        return join(JoinConfiguration.newlines(), components);
     }
 
     interface Args0 {

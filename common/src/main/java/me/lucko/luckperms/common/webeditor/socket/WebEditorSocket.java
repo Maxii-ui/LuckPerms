@@ -26,7 +26,6 @@
 package me.lucko.luckperms.common.webeditor.socket;
 
 import com.google.gson.JsonObject;
-
 import me.lucko.luckperms.common.http.BytesocksClient;
 import me.lucko.luckperms.common.http.UnsuccessfulRequestException;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
@@ -47,8 +46,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public class WebEditorSocket {
-
-    private static final int PROTOCOL_VERSION = 1;
 
     /** The plugin */
     private final LuckPermsPlugin plugin;
@@ -115,7 +112,7 @@ public class WebEditorSocket {
         String publicKey = Base64.getEncoder().encodeToString(this.pluginKeyPair.getPublic().getEncoded());
 
         JsonObject socket = new JsonObject();
-        socket.addProperty("protocolVersion", PROTOCOL_VERSION);
+        socket.addProperty("protocolVersion", SignatureAlgorithm.INSTANCE.protocolVersion());
         socket.addProperty("channelId", channelId);
         socket.addProperty("publicKey", publicKey);
 
@@ -133,7 +130,7 @@ public class WebEditorSocket {
      */
     public void send(JsonObject msg) {
         String encoded = GsonProvider.normal().toJson(msg);
-        String signature = CryptographyUtils.sign(this.pluginKeyPair.getPrivate(), encoded);
+        String signature = SignatureAlgorithm.INSTANCE.sign(this.pluginKeyPair.getPrivate(), encoded);
 
         JsonObject frame = new JObject()
                 .add("msg", encoded)

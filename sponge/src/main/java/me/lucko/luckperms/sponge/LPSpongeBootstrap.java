@@ -27,7 +27,6 @@ package me.lucko.luckperms.sponge;
 
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-
 import me.lucko.luckperms.common.loader.LoaderBootstrap;
 import me.lucko.luckperms.common.plugin.bootstrap.BootstrappedWithLoader;
 import me.lucko.luckperms.common.plugin.bootstrap.LuckPermsBootstrap;
@@ -36,9 +35,7 @@ import me.lucko.luckperms.common.plugin.classpath.JarInJarClassPathAppender;
 import me.lucko.luckperms.common.plugin.logging.Log4jPluginLogger;
 import me.lucko.luckperms.common.plugin.logging.PluginLogger;
 import me.lucko.luckperms.common.util.MoreFiles;
-
 import net.luckperms.api.platform.Platform;
-
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.Platform.Component;
@@ -52,6 +49,8 @@ import org.spongepowered.plugin.metadata.PluginMetadata;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -200,6 +199,15 @@ public class LPSpongeBootstrap implements LuckPermsBootstrap, LoaderBootstrap, B
     }
 
     public void registerListeners(Object obj) {
+        // Check if we are running Sponge API 9+
+        try {
+            final Method method = org.spongepowered.api.event.EventManager.class.getDeclaredMethod("registerListeners", PluginContainer.class, Object.class, MethodHandles.Lookup.class);
+            method.invoke(this.game.eventManager(), this.pluginContainer, obj, MethodHandles.lookup());
+            return;
+        } catch (Throwable t) {
+            // ignore
+        }
+        // Fallback to Sponge API 8
         this.game.eventManager().registerListeners(this.pluginContainer, obj);
     }
 

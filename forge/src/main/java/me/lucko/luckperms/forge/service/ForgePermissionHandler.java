@@ -33,7 +33,6 @@ import me.lucko.luckperms.common.verbose.event.CheckOrigin;
 import me.lucko.luckperms.forge.LPForgeBootstrap;
 import me.lucko.luckperms.forge.LPForgePlugin;
 import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
-
 import net.luckperms.api.context.ImmutableContextSet;
 import net.luckperms.api.query.QueryMode;
 import net.luckperms.api.query.QueryOptions;
@@ -53,7 +52,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class ForgePermissionHandler implements IPermissionHandler {
-    public static final ResourceLocation IDENTIFIER = new ResourceLocation(LPForgeBootstrap.ID, "permission_handler");
+    public static final ResourceLocation IDENTIFIER = ResourceLocation.fromNamespaceAndPath(LPForgeBootstrap.ID, "permission_handler");
 
     private final LPForgePlugin plugin;
     private final Set<PermissionNode<?>> permissionNodes;

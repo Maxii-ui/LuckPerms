@@ -31,18 +31,28 @@ import me.lucko.luckperms.common.locale.TranslationManager;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.verbose.event.CheckOrigin;
 import me.lucko.luckperms.forge.context.ForgeContextManager;
-
 import net.luckperms.api.query.QueryOptions;
 import net.luckperms.api.util.Tristate;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-
+import net.minecraftforge.common.util.LazyOptional;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 
 public class UserCapabilityImpl implements UserCapability {
+
+    private static LazyOptional<UserCapability> getCapability(Player player) {
+        LazyOptional<UserCapability> optional = player.getCapability(CAPABILITY);
+        if (optional.isPresent()) {
+            return optional;
+        }
+
+        // if capability is missing, try to restore them before trying again
+        player.reviveCaps();
+        return player.getCapability(CAPABILITY);
+    }
 
     /**
      * Gets a {@link UserCapability} for a given {@link ServerPlayer}.
@@ -51,8 +61,7 @@ public class UserCapabilityImpl implements UserCapability {
      * @return the capability
      */
     public static @NotNull UserCapabilityImpl get(@NotNull Player player) {
-        return (UserCapabilityImpl) player.getCapability(CAPABILITY)
-                .orElseThrow(() -> new IllegalStateException("Capability missing for " + player.getUUID()));
+        return (UserCapabilityImpl) getCapability(player).orElseThrow(() -> new IllegalStateException("Capability missing for " + player.getUUID()));
     }
 
     /**
@@ -62,7 +71,7 @@ public class UserCapabilityImpl implements UserCapability {
      * @return the capability, or null
      */
     public static @Nullable UserCapabilityImpl getNullable(@NotNull Player player) {
-        return (UserCapabilityImpl) player.getCapability(CAPABILITY).resolve().orElse(null);
+        return (UserCapabilityImpl) getCapability(player).resolve().orElse(null);
     }
 
     private boolean initialised = false;

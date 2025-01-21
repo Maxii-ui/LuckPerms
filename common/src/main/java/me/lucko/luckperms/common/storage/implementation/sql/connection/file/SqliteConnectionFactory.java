@@ -26,8 +26,8 @@
 package me.lucko.luckperms.common.storage.implementation.sql.connection.file;
 
 import me.lucko.luckperms.common.dependencies.Dependency;
-import me.lucko.luckperms.common.dependencies.classloader.IsolatedClassLoader;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
+import me.lucko.luckperms.common.storage.implementation.sql.StatementProcessor;
 
 import java.lang.reflect.Constructor;
 import java.nio.file.Path;
@@ -35,7 +35,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.Properties;
-import java.util.function.Function;
 
 public class SqliteConnectionFactory extends FlatfileConnectionFactory {
     private Constructor<?> connectionConstructor;
@@ -53,7 +52,7 @@ public class SqliteConnectionFactory extends FlatfileConnectionFactory {
     public void init(LuckPermsPlugin plugin) {
         migrateOldDatabaseFile("luckperms.sqlite");
 
-        IsolatedClassLoader classLoader = plugin.getDependencyManager().obtainClassLoaderWith(EnumSet.of(Dependency.SQLITE_DRIVER));
+        ClassLoader classLoader = plugin.getDependencyManager().obtainClassLoaderWith(EnumSet.of(Dependency.SQLITE_DRIVER));
         try {
             Class<?> connectionClass = classLoader.loadClass("org.sqlite.jdbc4.JDBC4Connection");
             this.connectionConstructor = connectionClass.getConstructor(String.class, String.class, Properties.class);
@@ -75,7 +74,7 @@ public class SqliteConnectionFactory extends FlatfileConnectionFactory {
     }
 
     @Override
-    public Function<String, String> getStatementProcessor() {
-        return s -> s.replace('\'', '`');
+    public StatementProcessor getStatementProcessor() {
+        return StatementProcessor.USE_BACKTICKS;
     }
 }

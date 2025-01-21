@@ -24,17 +24,23 @@ For more information, see the wiki article on [Why LuckPerms?](https://luckperms
 LuckPerms uses Gradle to handle dependencies & building.
 
 #### Requirements
-* Java 8 JDK or newer
+* Java 21 JDK or newer
 * Git
 
 #### Compiling from source
 ```sh
-git clone https://github.com/lucko/LuckPerms.git
+git clone https://github.com/LuckPerms/LuckPerms.git
 cd LuckPerms/
 ./gradlew build
 ```
 
 You can find the output jars in the `loader/build/libs` or `build/libs` directories.
+
+## Tests
+There are some automated tests which run during each build.
+
+* Unit tests are defined in [`common/src/test`](https://github.com/LuckPerms/LuckPerms/tree/master/common/src/test)
+* Integration tests are defined in [`standalone/src/test`](https://github.com/LuckPerms/LuckPerms/tree/master/standalone/src/test).
 
 ## Contributing
 #### Pull Requests
@@ -50,4 +56,4 @@ The project is split up into a few separate modules.
 * **Bukkit, BungeeCord, Fabric, Forge, Nukkit, Sponge & Velocity** - Each use the common module to implement plugins on the respective server platforms.
 
 ## License
-LuckPerms is licensed under the permissive MIT license. Please see [`LICENSE.txt`](https://github.com/lucko/LuckPerms/blob/master/LICENSE.txt) for more info.
+LuckPerms is licensed under the permissive MIT license. Please see [`LICENSE.txt`](https://github.com/LuckPerms/LuckPerms/blob/master/LICENSE.txt) for more info.

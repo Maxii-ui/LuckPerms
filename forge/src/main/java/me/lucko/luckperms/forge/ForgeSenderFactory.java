@@ -25,6 +25,7 @@
 
 package me.lucko.luckperms.forge;
 
+import com.mojang.brigadier.ParseResults;
 import me.lucko.luckperms.common.cacheddata.result.TristateResult;
 import me.lucko.luckperms.common.locale.TranslationManager;
 import me.lucko.luckperms.common.query.QueryOptionsImpl;
@@ -34,12 +35,15 @@ import me.lucko.luckperms.common.verbose.VerboseCheckTarget;
 import me.lucko.luckperms.common.verbose.event.CheckOrigin;
 import me.lucko.luckperms.forge.capabilities.UserCapability;
 import me.lucko.luckperms.forge.capabilities.UserCapabilityImpl;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.luckperms.api.util.Tristate;
+import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.chat.Component.Serializer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.rcon.RconConsoleSource;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Locale;
@@ -77,7 +81,7 @@ public class ForgeSenderFactory extends SenderFactory<LPForgePlugin, CommandSour
             locale = null;
         }
 
-        sender.sendSuccess(toNativeText(TranslationManager.render(message, locale)), false);
+        sender.sendSuccess(() -> toNativeText(TranslationManager.render(message, locale)), false);
     }
 
     @Override
@@ -101,16 +105,20 @@ public class ForgeSenderFactory extends SenderFactory<LPForgePlugin, CommandSour
 
     @Override
     protected void performCommand(CommandSourceStack sender, String command) {
-        sender.getServer().getCommands().performCommand(sender, command);
+        ParseResults<CommandSourceStack> results = sender.getServer().getCommands().getDispatcher().parse(command, sender);
+        sender.getServer().getCommands().performCommand(results, command);
     }
 
     @Override
     protected boolean isConsole(CommandSourceStack sender) {
-        return !(sender.getEntity() instanceof Player);
+        CommandSource output = sender.source;
+        return output == sender.getServer() || // Console
+                output.getClass() == RconConsoleSource.class || // Rcon
+                (output == CommandSource.NULL && sender.getTextName().equals("")); // Functions
     }
 
     public static net.minecraft.network.chat.Component toNativeText(Component component) {
-        return net.minecraft.network.chat.Component.Serializer.fromJson(GsonComponentSerializer.gson().serialize(component));
+        return Serializer.fromJson(GsonComponentSerializer.gson().serializeToTree(component), RegistryAccess.EMPTY);
     }
 
 }

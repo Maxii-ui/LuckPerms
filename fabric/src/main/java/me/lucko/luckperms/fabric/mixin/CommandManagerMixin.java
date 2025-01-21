@@ -25,22 +25,21 @@
 
 package me.lucko.luckperms.fabric.mixin;
 
+import com.mojang.brigadier.ParseResults;
 import me.lucko.luckperms.fabric.event.PreExecuteCommandCallback;
-
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(CommandManager.class)
 public class CommandManagerMixin {
     @Inject(at = @At("HEAD"), method = "execute", cancellable = true)
-    private void commandExecuteCallback(ServerCommandSource source, String input, CallbackInfoReturnable<Integer> info) {
-        if (!PreExecuteCommandCallback.EVENT.invoker().onPreExecuteCommand(source, input)) {
-            info.setReturnValue(0);
+    private void commandExecuteCallback(ParseResults<ServerCommandSource> parseResults, String command, CallbackInfo ci) {
+        if (!PreExecuteCommandCallback.EVENT.invoker().onPreExecuteCommand(parseResults.getContext().getSource(), command)) {
+            ci.cancel();
         }
     }
 }

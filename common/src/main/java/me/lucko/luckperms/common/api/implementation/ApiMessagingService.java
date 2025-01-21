@@ -26,10 +26,8 @@
 package me.lucko.luckperms.common.api.implementation;
 
 import me.lucko.luckperms.common.messaging.InternalMessagingService;
-
 import net.luckperms.api.messaging.MessagingService;
 import net.luckperms.api.model.user.User;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Objects;
@@ -55,5 +53,12 @@ public class ApiMessagingService implements MessagingService {
     public void pushUserUpdate(@NonNull User user) {
         Objects.requireNonNull(user, "user");
         this.handle.pushUserUpdate(ApiUser.cast(user));
+    }
+
+    @Override
+    public void sendCustomMessage(@NonNull String channelId, @NonNull String payload) {
+        Objects.requireNonNull(channelId, "channelId");
+        Objects.requireNonNull(payload, "payload");
+        this.handle.pushCustomPayload(channelId, payload);
     }
 }

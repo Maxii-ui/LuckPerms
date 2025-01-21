@@ -28,15 +28,14 @@ package me.lucko.luckperms.common.config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-
+import me.lucko.luckperms.common.cacheddata.metastack.SimpleMetaStackDefinition;
+import me.lucko.luckperms.common.cacheddata.metastack.StandardStackElements;
 import me.lucko.luckperms.common.cacheddata.type.SimpleMetaValueSelector;
 import me.lucko.luckperms.common.config.generic.KeyedConfiguration;
 import me.lucko.luckperms.common.config.generic.key.ConfigKey;
 import me.lucko.luckperms.common.config.generic.key.SimpleConfigKey;
 import me.lucko.luckperms.common.context.calculator.WorldNameRewriter;
 import me.lucko.luckperms.common.graph.TraversalAlgorithm;
-import me.lucko.luckperms.common.metastacking.SimpleMetaStackDefinition;
-import me.lucko.luckperms.common.metastacking.StandardStackElements;
 import me.lucko.luckperms.common.model.PrimaryGroupHolder;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.query.QueryOptionsBuilderImpl;
@@ -45,7 +44,6 @@ import me.lucko.luckperms.common.storage.implementation.split.SplitStorageType;
 import me.lucko.luckperms.common.storage.misc.StorageCredentials;
 import me.lucko.luckperms.common.util.ImmutableCollectors;
 import me.lucko.luckperms.common.util.Predicates;
-
 import net.luckperms.api.context.ContextSatisfyMode;
 import net.luckperms.api.metastacking.DuplicateRemovalFunction;
 import net.luckperms.api.metastacking.MetaStackDefinition;
@@ -75,6 +73,7 @@ import static me.lucko.luckperms.common.config.generic.key.ConfigKeyFactory.lowe
 import static me.lucko.luckperms.common.config.generic.key.ConfigKeyFactory.mapKey;
 import static me.lucko.luckperms.common.config.generic.key.ConfigKeyFactory.notReloadable;
 import static me.lucko.luckperms.common.config.generic.key.ConfigKeyFactory.stringKey;
+import static me.lucko.luckperms.common.config.generic.key.ConfigKeyFactory.stringListKey;
 
 /**
  * All of the {@link ConfigKey}s used by LuckPerms.
@@ -371,16 +370,16 @@ public final class ConfigKeys {
     /**
      * Creates a new prefix MetaStack element based upon the configured values.
      */
-    public static final ConfigKey<MetaStackDefinition> PREFIX_FORMATTING_OPTIONS = key(l -> {
-        List<String> format = l.getStringList("meta-formatting.prefix.format", new ArrayList<>());
+    public static final ConfigKey<MetaStackDefinition> PREFIX_FORMATTING_OPTIONS = key(c -> {
+        List<String> format = c.getStringList("meta-formatting.prefix.format", new ArrayList<>());
         if (format.isEmpty()) {
             format.add("highest");
         }
-        String startSpacer = l.getString("meta-formatting.prefix.start-spacer", "");
-        String middleSpacer = l.getString("meta-formatting.prefix.middle-spacer", " ");
-        String endSpacer = l.getString("meta-formatting.prefix.end-spacer", "");
+        String startSpacer = c.getString("meta-formatting.prefix.start-spacer", "");
+        String middleSpacer = c.getString("meta-formatting.prefix.middle-spacer", " ");
+        String endSpacer = c.getString("meta-formatting.prefix.end-spacer", "");
         DuplicateRemovalFunction duplicateRemovalFunction;
-        switch (l.getString("meta-formatting.prefix.duplicates", "").toLowerCase(Locale.ROOT)) {
+        switch (c.getString("meta-formatting.prefix.duplicates", "").toLowerCase(Locale.ROOT)) {
             case "first-only":
                 duplicateRemovalFunction = DuplicateRemovalFunction.FIRST_ONLY;
                 break;
@@ -392,22 +391,22 @@ public final class ConfigKeys {
                 break;
         }
 
-        return new SimpleMetaStackDefinition(StandardStackElements.parseList(l.getPlugin(), format), duplicateRemovalFunction, startSpacer, middleSpacer, endSpacer);
+        return new SimpleMetaStackDefinition(StandardStackElements.parseList(c.getPlugin(), format), duplicateRemovalFunction, startSpacer, middleSpacer, endSpacer);
     });
 
     /**
      * Creates a new suffix MetaStack element based upon the configured values.
      */
-    public static final ConfigKey<MetaStackDefinition> SUFFIX_FORMATTING_OPTIONS = key(l -> {
-        List<String> format = l.getStringList("meta-formatting.suffix.format", new ArrayList<>());
+    public static final ConfigKey<MetaStackDefinition> SUFFIX_FORMATTING_OPTIONS = key(c -> {
+        List<String> format = c.getStringList("meta-formatting.suffix.format", new ArrayList<>());
         if (format.isEmpty()) {
             format.add("highest");
         }
-        String startSpacer = l.getString("meta-formatting.suffix.start-spacer", "");
-        String middleSpacer = l.getString("meta-formatting.suffix.middle-spacer", " ");
-        String endSpacer = l.getString("meta-formatting.suffix.end-spacer", "");
+        String startSpacer = c.getString("meta-formatting.suffix.start-spacer", "");
+        String middleSpacer = c.getString("meta-formatting.suffix.middle-spacer", " ");
+        String endSpacer = c.getString("meta-formatting.suffix.end-spacer", "");
         DuplicateRemovalFunction duplicateRemovalFunction;
-        switch (l.getString("meta-formatting.prefix.duplicates", "").toLowerCase(Locale.ROOT)) {
+        switch (c.getString("meta-formatting.suffix.duplicates", "").toLowerCase(Locale.ROOT)) {
             case "first-only":
                 duplicateRemovalFunction = DuplicateRemovalFunction.FIRST_ONLY;
                 break;
@@ -419,7 +418,7 @@ public final class ConfigKeys {
                 break;
         }
 
-        return new SimpleMetaStackDefinition(StandardStackElements.parseList(l.getPlugin(), format), duplicateRemovalFunction, startSpacer, middleSpacer, endSpacer);
+        return new SimpleMetaStackDefinition(StandardStackElements.parseList(c.getPlugin(), format), duplicateRemovalFunction, startSpacer, middleSpacer, endSpacer);
     });
 
     /**
@@ -445,6 +444,11 @@ public final class ConfigKeys {
     });
 
     /**
+     * If log should be posted synchronously to storage/messaging in commands
+     */
+    public static final ConfigKey<Boolean> LOG_SYNCHRONOUSLY_IN_COMMANDS = booleanKey("log-synchronously-in-commands", false);
+
+    /**
      * If LuckPerms should automatically install translation bundles and periodically update them.
      */
     public static final ConfigKey<Boolean> AUTO_INSTALL_TRANSLATIONS = notReloadable(booleanKey("auto-install-translations", true));
@@ -463,6 +467,11 @@ public final class ConfigKeys {
      * If server operators should be able to use LuckPerms commands by default. Only used by the Bukkit platform.
      */
     public static final ConfigKey<Boolean> COMMANDS_ALLOW_OP = notReloadable(booleanKey("commands-allow-op", true));
+
+    /**
+     * If LuckPerms should rate-limit command executions.
+     */
+    public static final ConfigKey<Boolean> COMMANDS_RATE_LIMIT = booleanKey("commands-rate-limit", true);
 
     /**
      * If Vault lookups for offline players on the main server thread should be enabled
@@ -637,6 +646,11 @@ public final class ConfigKeys {
     public static final ConfigKey<String> REDIS_ADDRESS = notReloadable(stringKey("redis.address", null));
 
     /**
+     * The addresses of the redis servers (only for redis clusters)
+     */
+    public static final ConfigKey<List<String>> REDIS_ADDRESSES = notReloadable(stringListKey("redis.addresses", ImmutableList.of()));
+
+    /**
      * The username to connect with, or an empty string if it should use default
      */
     public static final ConfigKey<String> REDIS_USERNAME = notReloadable(stringKey("redis.username", ""));
@@ -650,6 +664,31 @@ public final class ConfigKeys {
      * If the redis connection should use SSL
      */
     public static final ConfigKey<Boolean> REDIS_SSL = notReloadable(booleanKey("redis.ssl", false));
+
+    /**
+     * If nats messaging is enabled
+     */
+    public static final ConfigKey<Boolean> NATS_ENABLED = notReloadable(booleanKey("nats.enabled", false));
+
+    /**
+     * The address of the nats server
+     */
+    public static final ConfigKey<String> NATS_ADDRESS = notReloadable(stringKey("nats.address", null));
+
+    /**
+     * The username to connect with, or an empty string if it should use default
+     */
+    public static final ConfigKey<String> NATS_USERNAME = notReloadable(stringKey("nats.username", ""));
+
+    /**
+     * The password in use by the nats server, or an empty string if there is no password
+     */
+    public static final ConfigKey<String> NATS_PASSWORD = notReloadable(stringKey("nats.password", ""));
+
+    /**
+     * If the nats connection should use SSL
+     */
+    public static final ConfigKey<Boolean> NATS_SSL = notReloadable(booleanKey("nats.ssl", false));
 
     /**
      * If rabbitmq messaging is enabled
@@ -677,6 +716,11 @@ public final class ConfigKeys {
     public static final ConfigKey<String> RABBITMQ_PASSWORD = notReloadable(stringKey("rabbitmq.password", "guest"));
 
     /**
+     * If the editor key should be generated lazily (only when needed)
+     */
+    public static final ConfigKey<Boolean> EDITOR_LAZILY_GENERATE_KEY = booleanKey("editor-lazily-generate-key", false);
+
+    /**
      * The URL of the bytebin instance used to upload data
      */
     public static final ConfigKey<String> BYTEBIN_URL = stringKey("bytebin-url", "https://usercontent.luckperms.net/");
@@ -685,6 +729,11 @@ public final class ConfigKeys {
      * The host of the bytesocks instance used to communicate with
      */
     public static final ConfigKey<String> BYTESOCKS_HOST = stringKey("bytesocks-host", "usersockets.luckperms.net");
+
+    /**
+     * If TLS (https/wss) should be used when connecting to bytesocks
+     */
+    public static final ConfigKey<Boolean> BYTESOCKS_USE_TLS = booleanKey("bytesocks-use-tls", true);
 
     /**
      * The URL of the web editor
@@ -709,6 +758,17 @@ public final class ConfigKeys {
 
     public static List<? extends ConfigKey<?>> getKeys() {
         return KEYS;
+    }
+
+    /**
+     * Check if the value at the given path should be censored in console/log output
+     *
+     * @param path the path
+     * @return true if the value should be censored
+     */
+    public static boolean shouldCensorValue(final String path) {
+        final String lower = path.toLowerCase(Locale.ROOT);
+        return lower.contains("password") || lower.contains("uri");
     }
 
 }

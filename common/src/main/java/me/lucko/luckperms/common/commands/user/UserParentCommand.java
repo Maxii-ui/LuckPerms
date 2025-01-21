@@ -27,7 +27,6 @@ package me.lucko.luckperms.common.commands.user;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
-
 import me.lucko.luckperms.common.command.abstraction.Command;
 import me.lucko.luckperms.common.command.abstraction.ParentCommand;
 import me.lucko.luckperms.common.command.spec.CommandSpec;
@@ -63,7 +62,7 @@ public class UserParentCommand extends ParentCommand<User, UserIdentifier> {
             .build(key -> new ReentrantLock());
 
     public UserParentCommand() {
-        super(CommandSpec.USER, "User", Type.TAKES_ARGUMENT_FOR_TARGET, ImmutableList.<Command<User>>builder()
+        super(CommandSpec.USER, "User", Type.TARGETED, ImmutableList.<Command<User>>builder()
                 .add(new UserInfo())
                 .add(new CommandPermission<>(HolderType.USER))
                 .add(new CommandParent<>(HolderType.USER))

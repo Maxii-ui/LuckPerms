@@ -54,7 +54,7 @@ final class FlagUtils {
     private static byte toByte0(Set<Flag> settings) {
         byte b = 0;
         for (Flag setting : settings) {
-            b |= 1 << setting.ordinal();
+            b |= (byte) (1 << setting.ordinal());
         }
         return b;
     }

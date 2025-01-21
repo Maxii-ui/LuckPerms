@@ -31,20 +31,24 @@ import me.lucko.luckperms.common.locale.TranslationManager;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.plugin.util.AbstractConnectionListener;
 import me.lucko.luckperms.sponge.LPSpongePlugin;
-
+import org.spongepowered.api.entity.living.player.server.ServerPlayer;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.filter.IsCancelled;
 import org.spongepowered.api.event.network.ServerSideConnectionEvent;
 import org.spongepowered.api.profile.GameProfile;
+import org.spongepowered.api.util.Identifiable;
 import org.spongepowered.api.util.Tristate;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 public class SpongeConnectionListener extends AbstractConnectionListener {
+
     private final LPSpongePlugin plugin;
 
     private final Set<UUID> deniedAsyncLogin = Collections.synchronizedSet(new HashSet<>());
@@ -169,7 +173,8 @@ public class SpongeConnectionListener extends AbstractConnectionListener {
 
     @Listener(order = Order.POST)
     public void onClientLeave(ServerSideConnectionEvent.Disconnect e) {
-        handleDisconnect(e.player().uniqueId());
+        Optional<GameProfile> profile = e.profile();
+        profile.ifPresent(p -> handleDisconnect(p.uniqueId()));
     }
 
 }

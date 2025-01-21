@@ -25,6 +25,7 @@
 
 package me.lucko.luckperms.common.api;
 
+import me.lucko.luckperms.common.api.implementation.ApiActionFilterFactory;
 import me.lucko.luckperms.common.api.implementation.ApiActionLogger;
 import me.lucko.luckperms.common.api.implementation.ApiContextManager;
 import me.lucko.luckperms.common.api.implementation.ApiGroupManager;
@@ -44,10 +45,10 @@ import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.common.plugin.bootstrap.BootstrappedWithLoader;
 import me.lucko.luckperms.common.plugin.bootstrap.LuckPermsBootstrap;
 import me.lucko.luckperms.common.plugin.logging.PluginLogger;
-
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.actionlog.ActionLogger;
+import net.luckperms.api.actionlog.filter.ActionFilterFactory;
 import net.luckperms.api.context.ContextManager;
 import net.luckperms.api.messaging.MessagingService;
 import net.luckperms.api.messenger.MessengerProvider;
@@ -56,12 +57,12 @@ import net.luckperms.api.model.group.GroupManager;
 import net.luckperms.api.model.user.UserManager;
 import net.luckperms.api.node.NodeBuilderRegistry;
 import net.luckperms.api.node.matcher.NodeMatcherFactory;
+import net.luckperms.api.platform.Health;
 import net.luckperms.api.platform.Platform;
 import net.luckperms.api.platform.PlayerAdapter;
 import net.luckperms.api.platform.PluginMetadata;
 import net.luckperms.api.query.QueryOptionsRegistry;
 import net.luckperms.api.track.TrackManager;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Objects;
@@ -175,6 +176,11 @@ public class LuckPermsApiProvider implements LuckPerms {
     }
 
     @Override
+    public @NonNull Health runHealthCheck() {
+        return this.plugin.runHealthCheck();
+    }
+
+    @Override
     public @NonNull AbstractEventBus<?> getEventBus() {
         return this.plugin.getEventDispatcher().getEventBus();
     }
@@ -221,4 +227,8 @@ public class LuckPermsApiProvider implements LuckPerms {
         return ApiNodeMatcherFactory.INSTANCE;
     }
 
+    @Override
+    public @NonNull ActionFilterFactory getActionFilterFactory() {
+        return ApiActionFilterFactory.INSTANCE;
+    }
 }

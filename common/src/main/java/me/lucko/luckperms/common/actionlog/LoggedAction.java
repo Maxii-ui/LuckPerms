@@ -26,7 +26,7 @@
 package me.lucko.luckperms.common.actionlog;
 
 import com.google.common.base.Strings;
-
+import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.model.Group;
 import me.lucko.luckperms.common.model.HolderType;
 import me.lucko.luckperms.common.model.PermissionHolder;
@@ -35,22 +35,20 @@ import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.common.sender.Sender;
 import me.lucko.luckperms.common.util.DurationFormatter;
-
 import net.luckperms.api.actionlog.Action;
 import net.luckperms.api.context.Context;
 import net.luckperms.api.context.ContextSet;
 import net.luckperms.api.context.DefaultContextKeys;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * An implementation of {@link Action} and {@link Action.Builder},
@@ -126,15 +124,11 @@ public class LoggedAction implements Action {
         return ActionComparator.INSTANCE.compare(this, other);
     }
 
-    public boolean matchesSearch(String query) {
-        query = Objects.requireNonNull(query, "query").toLowerCase(Locale.ROOT);
-        return this.source.name.toLowerCase(Locale.ROOT).contains(query) ||
-                this.target.name.toLowerCase(Locale.ROOT).contains(query) ||
-                this.description.toLowerCase(Locale.ROOT).contains(query);
-    }
-
     public void submit(LuckPermsPlugin plugin, Sender sender) {
-        plugin.getLogDispatcher().dispatch(this, sender);
+        CompletableFuture<Void> future = plugin.getLogDispatcher().dispatch(this, sender);
+        if (plugin.getConfiguration().get(ConfigKeys.LOG_SYNCHRONOUSLY_IN_COMMANDS)) {
+            future.join();
+        }
     }
 
     @Override
@@ -396,14 +390,14 @@ public class LoggedAction implements Action {
         }
     }
 
-    public static char getTypeCharacter(Target.Type type) {
+    public static String getTypeString(Target.Type type) {
         switch (type) {
             case USER:
-                return 'U';
+                return "U";
             case GROUP:
-                return 'G';
+                return "G";
             case TRACK:
-                return 'T';
+                return "T";
             default:
                 throw new AssertionError();
         }

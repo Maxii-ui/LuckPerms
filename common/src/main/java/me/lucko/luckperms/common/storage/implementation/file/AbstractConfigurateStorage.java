@@ -26,11 +26,12 @@
 package me.lucko.luckperms.common.storage.implementation.file;
 
 import com.google.common.collect.Iterables;
-
-import me.lucko.luckperms.common.actionlog.Log;
+import me.lucko.luckperms.common.actionlog.LogPage;
 import me.lucko.luckperms.common.bulkupdate.BulkUpdate;
 import me.lucko.luckperms.common.context.ImmutableContextSetImpl;
 import me.lucko.luckperms.common.context.serializer.ContextSetConfigurateSerializer;
+import me.lucko.luckperms.common.filter.FilterList;
+import me.lucko.luckperms.common.filter.PageParameters;
 import me.lucko.luckperms.common.model.Group;
 import me.lucko.luckperms.common.model.HolderType;
 import me.lucko.luckperms.common.model.Track;
@@ -42,12 +43,12 @@ import me.lucko.luckperms.common.node.types.Meta;
 import me.lucko.luckperms.common.node.types.Prefix;
 import me.lucko.luckperms.common.node.types.Suffix;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
+import me.lucko.luckperms.common.storage.StorageMetadata;
 import me.lucko.luckperms.common.storage.implementation.StorageImplementation;
 import me.lucko.luckperms.common.storage.implementation.file.loader.ConfigurateLoader;
 import me.lucko.luckperms.common.storage.implementation.file.loader.JsonLoader;
 import me.lucko.luckperms.common.storage.implementation.file.loader.YamlLoader;
 import me.lucko.luckperms.common.util.MoreFiles;
-
 import net.luckperms.api.actionlog.Action;
 import net.luckperms.api.context.DefaultContextKeys;
 import net.luckperms.api.context.ImmutableContextSet;
@@ -58,9 +59,9 @@ import net.luckperms.api.node.NodeType;
 import net.luckperms.api.node.types.ChatMetaNode;
 import net.luckperms.api.node.types.InheritanceNode;
 import net.luckperms.api.node.types.MetaNode;
-
 import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.Types;
+import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -119,6 +120,11 @@ public abstract class AbstractConfigurateStorage implements StorageImplementatio
         return this.implementationName;
     }
 
+    @Override
+    public StorageMetadata getMeta() {
+        return new StorageMetadata();
+    }
+
     /**
      * Reads a configuration node from the given location
      *
@@ -165,8 +171,8 @@ public abstract class AbstractConfigurateStorage implements StorageImplementatio
     }
 
     @Override
-    public Log getLog() throws IOException {
-        return this.actionLogger.getLog();
+    public LogPage getLogPage(FilterList<Action> filters, @Nullable PageParameters page) throws Exception {
+        return this.actionLogger.getLogPage(filters, page);
     }
 
     @Override

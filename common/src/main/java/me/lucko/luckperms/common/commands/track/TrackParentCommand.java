@@ -27,7 +27,6 @@ package me.lucko.luckperms.common.commands.track;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
-
 import me.lucko.luckperms.common.command.abstraction.Command;
 import me.lucko.luckperms.common.command.abstraction.ParentCommand;
 import me.lucko.luckperms.common.command.spec.CommandSpec;
@@ -54,7 +53,7 @@ public class TrackParentCommand extends ParentCommand<Track, String> {
             .build(key -> new ReentrantLock());
 
     public TrackParentCommand() {
-        super(CommandSpec.TRACK, "Track", Type.TAKES_ARGUMENT_FOR_TARGET, ImmutableList.<Command<Track>>builder()
+        super(CommandSpec.TRACK, "Track", Type.TARGETED, ImmutableList.<Command<Track>>builder()
                 .add(new TrackInfo())
                 .add(new TrackEditor())
                 .add(new TrackAppend())

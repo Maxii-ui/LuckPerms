@@ -17,8 +17,8 @@
   "license": "MIT",
   "contact": {
     "homepage": "https://luckperms.net",
-    "source": "https://github.com/lucko/LuckPerms",
-    "issues": "https://github.com/lucko/LuckPerms/issues"
+    "source": "https://github.com/LuckPerms/LuckPerms",
+    "issues": "https://github.com/LuckPerms/LuckPerms/issues"
   },
   "environment": "server",
   "entrypoints": {
@@ -32,10 +32,10 @@
   "depends": {
     "fabricloader": ">=0.9.0",
     "fabric-api-base": "*",
-    "fabric-command-api-v1": "*",
+    "fabric-command-api-v2": "*",
     "fabric-lifecycle-events-v1": "*",
-    "fabric-networking-v0": "*",
-    "fabric-permissions-api-v0": "*"
+    "fabric-networking-api-v1": "*",
+    "fabric-permissions-api-v0": ">=0.3.1"
   },
   "custom": {
     "modmenu:api": true

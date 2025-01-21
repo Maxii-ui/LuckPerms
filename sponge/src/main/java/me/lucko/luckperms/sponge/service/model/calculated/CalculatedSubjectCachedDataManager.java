@@ -26,9 +26,10 @@
 package me.lucko.luckperms.sponge.service.model.calculated;
 
 import com.google.common.collect.ImmutableList;
-
 import me.lucko.luckperms.common.cacheddata.AbstractCachedDataManager;
 import me.lucko.luckperms.common.cacheddata.CacheMetadata;
+import me.lucko.luckperms.common.cacheddata.metastack.SimpleMetaStackDefinition;
+import me.lucko.luckperms.common.cacheddata.metastack.StandardStackElements;
 import me.lucko.luckperms.common.cacheddata.type.MetaAccumulator;
 import me.lucko.luckperms.common.calculator.CalculatorFactory;
 import me.lucko.luckperms.common.calculator.PermissionCalculator;
@@ -36,13 +37,10 @@ import me.lucko.luckperms.common.calculator.processor.DirectProcessor;
 import me.lucko.luckperms.common.calculator.processor.PermissionProcessor;
 import me.lucko.luckperms.common.calculator.processor.SpongeWildcardProcessor;
 import me.lucko.luckperms.common.calculator.processor.WildcardProcessor;
-import me.lucko.luckperms.common.metastacking.SimpleMetaStackDefinition;
-import me.lucko.luckperms.common.metastacking.StandardStackElements;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.common.verbose.VerboseCheckTarget;
 import me.lucko.luckperms.sponge.calculator.FixedTypeDefaultsProcessor;
 import me.lucko.luckperms.sponge.calculator.RootDefaultsProcessor;
-
 import net.luckperms.api.metastacking.DuplicateRemovalFunction;
 import net.luckperms.api.metastacking.MetaStackDefinition;
 import net.luckperms.api.node.ChatMetaType;

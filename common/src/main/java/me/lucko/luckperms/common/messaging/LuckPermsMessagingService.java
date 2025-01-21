@@ -27,51 +27,55 @@ package me.lucko.luckperms.common.messaging;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
 import me.lucko.luckperms.common.actionlog.LoggedAction;
 import me.lucko.luckperms.common.cache.BufferedRequest;
 import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.messaging.message.ActionLogMessageImpl;
+import me.lucko.luckperms.common.messaging.message.CustomMessageImpl;
 import me.lucko.luckperms.common.messaging.message.UpdateMessageImpl;
 import me.lucko.luckperms.common.messaging.message.UserUpdateMessageImpl;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
+import me.lucko.luckperms.common.util.AsyncInterface;
 import me.lucko.luckperms.common.util.ExpiringSet;
 import me.lucko.luckperms.common.util.gson.GsonProvider;
 import me.lucko.luckperms.common.util.gson.JObject;
-
 import net.luckperms.api.actionlog.Action;
+import net.luckperms.api.event.sync.SyncType;
 import net.luckperms.api.messenger.IncomingMessageConsumer;
 import net.luckperms.api.messenger.Messenger;
 import net.luckperms.api.messenger.MessengerProvider;
 import net.luckperms.api.messenger.message.Message;
 import net.luckperms.api.messenger.message.type.ActionLogMessage;
+import net.luckperms.api.messenger.message.type.CustomMessage;
 import net.luckperms.api.messenger.message.type.UpdateMessage;
 import net.luckperms.api.messenger.message.type.UserUpdateMessage;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-public class LuckPermsMessagingService implements InternalMessagingService, IncomingMessageConsumer {
+public class LuckPermsMessagingService extends AsyncInterface implements InternalMessagingService, IncomingMessageConsumer {
     private final LuckPermsPlugin plugin;
-    private final ExpiringSet<UUID> receivedMessages;
+    private final Set<UUID> receivedMessages;
     private final PushUpdateBuffer updateBuffer;
 
     private final MessengerProvider messengerProvider;
     private final Messenger messenger;
 
     public LuckPermsMessagingService(LuckPermsPlugin plugin, MessengerProvider messengerProvider) {
+        super(plugin);
         this.plugin = plugin;
 
         this.messengerProvider = messengerProvider;
         this.messenger = messengerProvider.obtain(this);
         Objects.requireNonNull(this.messenger, "messenger");
 
-        this.receivedMessages = new ExpiringSet<>(1, TimeUnit.HOURS);
+        this.receivedMessages = ExpiringSet.newExpiringSet(5, TimeUnit.MINUTES);
         this.updateBuffer = new PushUpdateBuffer(plugin);
     }
 
@@ -107,8 +111,8 @@ public class LuckPermsMessagingService implements InternalMessagingService, Inco
     }
 
     @Override
-    public void pushUpdate() {
-        this.plugin.getBootstrap().getScheduler().executeAsync(() -> {
+    public CompletableFuture<Void> pushUpdate() {
+        return future(() -> {
             UUID requestId = generatePingId();
             this.plugin.getLogger().info("[Messaging] Sending ping with id: " + requestId);
             this.messenger.sendOutgoingMessage(new UpdateMessageImpl(requestId));
@@ -116,8 +120,8 @@ public class LuckPermsMessagingService implements InternalMessagingService, Inco
     }
 
     @Override
-    public void pushUserUpdate(User user) {
-        this.plugin.getBootstrap().getScheduler().executeAsync(() -> {
+    public CompletableFuture<Void> pushUserUpdate(User user) {
+        return future(() -> {
             UUID requestId = generatePingId();
             this.plugin.getLogger().info("[Messaging] Sending user ping for '" + user.getPlainDisplayName() + "' with id: " + requestId);
             this.messenger.sendOutgoingMessage(new UserUpdateMessageImpl(requestId, user.getUniqueId()));
@@ -125,8 +129,8 @@ public class LuckPermsMessagingService implements InternalMessagingService, Inco
     }
 
     @Override
-    public void pushLog(Action logEntry) {
-        this.plugin.getBootstrap().getScheduler().executeAsync(() -> {
+    public CompletableFuture<Void> pushLog(Action logEntry) {
+        return future(() -> {
             UUID requestId = generatePingId();
 
             if (this.plugin.getEventDispatcher().dispatchLogNetworkPublish(!this.plugin.getConfiguration().get(ConfigKeys.PUSH_LOG_ENTRIES), requestId, logEntry)) {
@@ -135,6 +139,14 @@ public class LuckPermsMessagingService implements InternalMessagingService, Inco
 
             this.plugin.getLogger().info("[Messaging] Sending log with id: " + requestId);
             this.messenger.sendOutgoingMessage(new ActionLogMessageImpl(requestId, logEntry));
+        });
+    }
+
+    @Override
+    public CompletableFuture<Void> pushCustomPayload(String channelId, String payload) {
+        return future(() -> {
+            UUID requestId = generatePingId();
+            this.messenger.sendOutgoingMessage(new CustomMessageImpl(requestId, channelId, payload));
         });
     }
 
@@ -149,7 +161,8 @@ public class LuckPermsMessagingService implements InternalMessagingService, Inco
         // determine if the message can be handled by us
         boolean valid = message instanceof UpdateMessage ||
                 message instanceof UserUpdateMessage ||
-                message instanceof ActionLogMessage;
+                message instanceof ActionLogMessage ||
+                message instanceof CustomMessage;
 
         // instead of throwing an exception here, just return false
         // it means an instance of LP can gracefully handle messages it doesn't
@@ -211,6 +224,9 @@ public class LuckPermsMessagingService implements InternalMessagingService, Inco
             case ActionLogMessageImpl.TYPE:
                 decoded = ActionLogMessageImpl.decode(content, id);
                 break;
+            case CustomMessageImpl.TYPE:
+                decoded = CustomMessageImpl.decode(content, id);
+                break;
             default:
                 // gracefully return if we just don't recognise the type
                 return false;
@@ -238,34 +254,46 @@ public class LuckPermsMessagingService implements InternalMessagingService, Inco
     private void processIncomingMessage(Message message) {
         if (message instanceof UpdateMessage) {
             UpdateMessage msg = (UpdateMessage) message;
+            UUID msgId = msg.getId();
 
-            this.plugin.getLogger().info("[Messaging] Received update ping with id: " + msg.getId());
-
-            if (this.plugin.getEventDispatcher().dispatchNetworkPreSync(false, msg.getId())) {
+            if (this.plugin.getEventDispatcher().dispatchNetworkPreSync(false, msgId, SyncType.FULL, null)) {
                 return;
             }
 
-            this.plugin.getSyncTaskBuffer().request();
+            this.plugin.getLogger().info("[Messaging] Received update ping with id: " + msgId);
+            this.plugin.getSyncTaskBuffer().request()
+                    .thenRunAsync(() -> this.plugin.getEventDispatcher().dispatchNetworkPostSync(msgId, SyncType.FULL, true, null));
+
         } else if (message instanceof UserUpdateMessage) {
             UserUpdateMessage msg = (UserUpdateMessage) message;
+            UUID msgId = msg.getId();
+            UUID userUniqueId = msg.getUserUniqueId();
 
-            User user = this.plugin.getUserManager().getIfLoaded(msg.getUserUniqueId());
+            if (this.plugin.getEventDispatcher().dispatchNetworkPreSync(false, msgId, SyncType.SPECIFIC_USER, userUniqueId)) {
+                return;
+            }
+
+            User user = this.plugin.getUserManager().getIfLoaded(userUniqueId);
             if (user == null) {
+                this.plugin.getEventDispatcher().dispatchNetworkPostSync(msgId, SyncType.SPECIFIC_USER, false, userUniqueId);
                 return;
             }
 
-            this.plugin.getLogger().info("[Messaging] Received user update ping for '" + user.getPlainDisplayName() + "' with id: " + msg.getId());
-
-            if (this.plugin.getEventDispatcher().dispatchNetworkPreSync(false, msg.getId())) {
-                return;
-            }
-
-            this.plugin.getStorage().loadUser(user.getUniqueId(), null);
+            this.plugin.getLogger().info("[Messaging] Received user update ping for '" + user.getPlainDisplayName() + "' with id: " + msgId);
+            this.plugin.getStorage().loadUser(user.getUniqueId(), null)
+                    .thenRunAsync(() -> this.plugin.getEventDispatcher().dispatchNetworkPostSync(msgId, SyncType.SPECIFIC_USER, true, userUniqueId));
+            
         } else if (message instanceof ActionLogMessage) {
             ActionLogMessage msg = (ActionLogMessage) message;
 
             this.plugin.getEventDispatcher().dispatchLogReceive(msg.getId(), msg.getAction());
-            this.plugin.getLogDispatcher().dispatchFromRemote((LoggedAction) msg.getAction());
+            this.plugin.getLogDispatcher().broadcastFromRemote((LoggedAction) msg.getAction());
+
+        } else if (message instanceof CustomMessage) {
+            CustomMessage msg = (CustomMessage) message;
+
+            this.plugin.getEventDispatcher().dispatchCustomMessageReceive(msg.getChannelId(), msg.getPayload());
+
         } else {
             throw new IllegalArgumentException("Unknown message type: " + message.getClass().getName());
         }

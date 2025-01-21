@@ -1,12 +1,19 @@
-// Fabric Needs this
 pluginManagement {
     repositories {
-        jcenter()
-        maven {
-            url 'https://maven.fabricmc.net/'
-        }
         gradlePluginPortal()
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        maven {
+            name = 'Forge'
+            url = 'https://maven.minecraftforge.net/'
+        }
     }
+}
+
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version("0.8.0")
 }
 
 rootProject.name = 'luckperms'
@@ -21,6 +28,8 @@ include (
         'bungee',
         'bungee:loader',
         'fabric',
+        'neoforge',
+        'neoforge:loader',
         'forge',
         'forge:loader',
         'forge:forge-api',
@@ -29,6 +38,9 @@ include (
         'sponge',
         'sponge:loader',
         'sponge:sponge-service',
-        'sponge:sponge-service-api8',
-        'velocity'
+        'sponge:sponge-service-proxy',
+        'velocity',
+        'standalone',
+        'standalone:loader',
+        'standalone:app'
 )

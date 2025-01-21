@@ -25,23 +25,22 @@
 
 package me.lucko.luckperms.common.storage.implementation;
 
-import me.lucko.luckperms.common.actionlog.Log;
+import me.lucko.luckperms.common.actionlog.LogPage;
 import me.lucko.luckperms.common.bulkupdate.BulkUpdate;
+import me.lucko.luckperms.common.filter.FilterList;
+import me.lucko.luckperms.common.filter.PageParameters;
 import me.lucko.luckperms.common.model.Group;
 import me.lucko.luckperms.common.model.Track;
 import me.lucko.luckperms.common.model.User;
 import me.lucko.luckperms.common.node.matcher.ConstraintNodeMatcher;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
+import me.lucko.luckperms.common.storage.StorageMetadata;
 import me.lucko.luckperms.common.storage.misc.NodeEntry;
-
-import net.kyori.adventure.text.Component;
 import net.luckperms.api.actionlog.Action;
 import net.luckperms.api.model.PlayerSaveResult;
 import net.luckperms.api.node.Node;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,13 +56,11 @@ public interface StorageImplementation {
 
     void shutdown();
 
-    default Map<Component, Component> getMeta() {
-        return Collections.emptyMap();
-    }
+    StorageMetadata getMeta();
 
     void logAction(Action entry) throws Exception;
 
-    Log getLog() throws Exception;
+    LogPage getLogPage(FilterList<Action> filters, @Nullable PageParameters page) throws Exception;
 
     void applyBulkUpdate(BulkUpdate bulkUpdate) throws Exception;
 

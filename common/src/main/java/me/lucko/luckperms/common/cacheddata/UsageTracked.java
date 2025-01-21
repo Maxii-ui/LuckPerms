@@ -25,14 +25,20 @@
 
 package me.lucko.luckperms.common.cacheddata;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import java.util.concurrent.TimeUnit;
+
 public abstract class UsageTracked {
-    private long lastUsed = System.currentTimeMillis();
+
+    @VisibleForTesting
+    protected long lastUsed = System.currentTimeMillis();
 
     public void recordUsage() {
         this.lastUsed = System.currentTimeMillis();
     }
 
-    public boolean usedSince(long duration) {
-        return this.lastUsed > System.currentTimeMillis() - duration;
+    public boolean usedInTheLast(long duration, TimeUnit unit) {
+        return this.lastUsed > System.currentTimeMillis() - unit.toMillis(duration);
     }
 }

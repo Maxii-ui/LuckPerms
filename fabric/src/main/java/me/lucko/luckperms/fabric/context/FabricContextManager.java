@@ -30,7 +30,6 @@ import me.lucko.luckperms.common.context.manager.ContextManager;
 import me.lucko.luckperms.common.context.manager.QueryOptionsCache;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
 import me.lucko.luckperms.fabric.model.MixinUser;
-
 import net.luckperms.api.context.ImmutableContextSet;
 import net.luckperms.api.query.OptionKey;
 import net.luckperms.api.query.QueryOptions;
@@ -60,7 +59,7 @@ public class FabricContextManager extends ContextManager<ServerPlayerEntity, Ser
             throw new NullPointerException("subject");
         }
 
-        return ((MixinUser) subject).getQueryOptionsCache(this);
+        return ((MixinUser) subject).luckperms$getQueryOptionsCache(this);
     }
 
     @Override

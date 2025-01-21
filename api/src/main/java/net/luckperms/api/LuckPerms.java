@@ -26,6 +26,7 @@
 package net.luckperms.api;
 
 import net.luckperms.api.actionlog.ActionLogger;
+import net.luckperms.api.actionlog.filter.ActionFilterFactory;
 import net.luckperms.api.context.ContextCalculator;
 import net.luckperms.api.context.ContextManager;
 import net.luckperms.api.event.EventBus;
@@ -40,13 +41,13 @@ import net.luckperms.api.model.user.User;
 import net.luckperms.api.model.user.UserManager;
 import net.luckperms.api.node.NodeBuilderRegistry;
 import net.luckperms.api.node.matcher.NodeMatcherFactory;
+import net.luckperms.api.platform.Health;
 import net.luckperms.api.platform.Platform;
 import net.luckperms.api.platform.PlayerAdapter;
 import net.luckperms.api.platform.PluginMetadata;
 import net.luckperms.api.query.QueryOptionsRegistry;
 import net.luckperms.api.track.Track;
 import net.luckperms.api.track.TrackManager;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.jetbrains.annotations.ApiStatus.Internal;
 
@@ -221,6 +222,17 @@ public interface LuckPerms {
     @NonNull CompletableFuture<Void> runUpdateTask();
 
     /**
+     * Executes a health check.
+     *
+     * <p>This task checks if the LuckPerms implementation is running and
+     * whether it has a connection to the database (if applicable).</p>
+     *
+     * @return the health status
+     * @since 5.5
+     */
+    @NonNull Health runHealthCheck();
+
+    /**
      * Registers a {@link MessengerProvider} for use by the platform.
      *
      * <p>Note that the mere action of registering a provider doesn't
@@ -255,5 +267,15 @@ public interface LuckPerms {
      */
     @Internal
     @NonNull NodeMatcherFactory getNodeMatcherFactory();
+
+    /**
+     * Gets the {@link ActionFilterFactory}.
+     *
+     * @return the action filter factory
+     * @since 5.5
+     */
+    @Internal
+    @NonNull
+    ActionFilterFactory getActionFilterFactory();
 
 }

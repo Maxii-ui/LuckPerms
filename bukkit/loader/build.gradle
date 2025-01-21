@@ -1,9 +1,9 @@
 plugins {
-    id 'com.github.johnrengelman.shadow'
+    alias(libs.plugins.shadow)
 }
 
 repositories {
-    maven { url 'https://papermc.io/repo/repository/maven-public/' }
+    maven { url 'https://repo.papermc.io/repository/maven-public/' }
 }
 
 dependencies {
@@ -24,6 +24,10 @@ shadowJar {
 
     from {
         project(':bukkit').tasks.shadowJar.archiveFile
+    }
+
+    manifest {
+        attributes(["paperweight-mappings-namespace": "mojang"])
     }
 }
 

@@ -36,7 +36,6 @@ import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,12 +57,8 @@ public class UserCapabilityListener {
 
     @SubscribeEvent
     public void onPlayerClone(PlayerEvent.Clone event) {
-        if (!event.isWasDeath()) {
-            return;
-        }
-
         Player previousPlayer = event.getOriginal();
-        Player currentPlayer = event.getPlayer();
+        Player currentPlayer = event.getEntity();
 
         previousPlayer.reviveCaps();
         try {
@@ -72,6 +67,8 @@ public class UserCapabilityListener {
 
             current.initialise(previous);
             current.getQueryOptionsCache().invalidate();
+        } catch (IllegalStateException e) {
+            // continue on if we cannot copy original data
         } finally {
             previousPlayer.invalidateCaps();
         }

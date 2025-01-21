@@ -27,9 +27,7 @@ package me.lucko.luckperms.common.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-
 import me.lucko.luckperms.common.context.ImmutableContextSetImpl;
-
 import net.luckperms.api.context.ContextSatisfyMode;
 import net.luckperms.api.context.ContextSet;
 import net.luckperms.api.context.ImmutableContextSet;
@@ -37,7 +35,6 @@ import net.luckperms.api.query.Flag;
 import net.luckperms.api.query.OptionKey;
 import net.luckperms.api.query.QueryMode;
 import net.luckperms.api.query.QueryOptions;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -59,7 +56,7 @@ public class QueryOptionsImpl implements QueryOptions {
     // computed based on state above
     private final int hashCode;
     private Set<Flag> flagsSet = null;
-    private final ContextSatisfyMode contextSatisfyMode;
+    private final ContextSatisfyMode overrideContextSatisfyMode;
 
     QueryOptionsImpl(QueryMode mode, @Nullable ImmutableContextSet context, byte flags, @Nullable Map<OptionKey<?>, Object> options) {
         this.mode = mode;
@@ -68,7 +65,7 @@ public class QueryOptionsImpl implements QueryOptions {
         this.options = options == null ? null : ImmutableMap.copyOf(options);
 
         this.hashCode = calculateHashCode();
-        this.contextSatisfyMode = options == null ? null : (ContextSatisfyMode) options.get(ContextSatisfyMode.KEY);
+        this.overrideContextSatisfyMode = options == null ? null : (ContextSatisfyMode) options.get(ContextSatisfyMode.KEY);
     }
 
     @Override
@@ -122,7 +119,7 @@ public class QueryOptionsImpl implements QueryOptions {
     public boolean satisfies(@NonNull ContextSet contextSet, @NonNull ContextSatisfyMode defaultContextSatisfyMode) {
         switch (this.mode) {
             case CONTEXTUAL:
-                return contextSet.isSatisfiedBy(this.context, this.contextSatisfyMode == null ? defaultContextSatisfyMode : this.contextSatisfyMode);
+                return contextSet.isSatisfiedBy(this.context, this.overrideContextSatisfyMode == null ? defaultContextSatisfyMode : this.overrideContextSatisfyMode);
             case NON_CONTEXTUAL:
                 return true;
             default:

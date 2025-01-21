@@ -25,8 +25,8 @@
 
 package me.lucko.luckperms.common.config.generic.adapter;
 
+import me.lucko.luckperms.common.config.ConfigKeys;
 import me.lucko.luckperms.common.plugin.LuckPermsPlugin;
-
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.Locale;
@@ -51,7 +51,8 @@ public class EnvironmentVariableConfigAdapter extends StringBasedConfigurationAd
 
         String value = System.getenv(key);
         if (value != null) {
-            this.plugin.getLogger().info("Resolved configuration value from environment variable: " + key + " = " + (path.contains("password") ? "*****" : value));
+            String printableValue = ConfigKeys.shouldCensorValue(path) ? "*****" : value;
+            this.plugin.getLogger().info(String.format("Resolved configuration value from environment variable: %s = %s", key, printableValue));
         }
         return value;
     }
